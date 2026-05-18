@@ -18,7 +18,7 @@ public class PaymentWebhookController {
 
     private final PaymentService paymentService;
 
-    @Value("${razorpay.webhook_secret}")
+    @Value("${razorpay.webhook.secret}")
     private String webhookSecret;
 
     // =====================================

@@ -25,10 +25,11 @@ public class PaymentService {
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final OrderService orderService;
 
-    @Value("${razorpay.key_id}")
+    // ✅ FIXED PROPERTY NAMES
+    @Value("${razorpay.key.id}")
     private String keyId;
 
-    @Value("${razorpay.key_secret}")
+    @Value("${razorpay.key.secret}")
     private String keySecret;
 
     @Value("${payment.dev-mode:false}")
@@ -55,6 +56,7 @@ public class PaymentService {
                 new RazorpayClient(keyId, keySecret);
 
         JSONObject options = new JSONObject();
+
         options.put("amount", (int) (order.getTotalAmount() * 100));
         options.put("currency", "INR");
         options.put("receipt", "order_rcptid_" + order.getId());
@@ -62,16 +64,18 @@ public class PaymentService {
         com.razorpay.Order razorpayOrder =
                 razorpayClient.orders.create(options);
 
-        String razorpayOrderId = razorpayOrder.get("id").toString();
+        String razorpayOrderId =
+                razorpayOrder.get("id").toString();
 
         order.setRazorpayOrderId(razorpayOrderId);
 
-        PaymentTransaction transaction = PaymentTransaction.builder()
-                .order(order)
-                .razorpayOrderId(razorpayOrderId)
-                .paymentStatus(PaymentStatus.PENDING)
-                .transactionTime(LocalDateTime.now())
-                .build();
+        PaymentTransaction transaction =
+                PaymentTransaction.builder()
+                        .order(order)
+                        .razorpayOrderId(razorpayOrderId)
+                        .paymentStatus(PaymentStatus.PENDING)
+                        .transactionTime(LocalDateTime.now())
+                        .build();
 
         paymentTransactionRepository.save(transaction);
 
@@ -79,7 +83,7 @@ public class PaymentService {
     }
 
     // =========================================================
-    // ✅ VERIFY PAYMENT FROM FRONTEND (Optional Flow)
+    // ✅ VERIFY PAYMENT FROM FRONTEND
     // =========================================================
     @Transactional
     public void verifyAndMarkPaymentSuccess(
@@ -96,9 +100,11 @@ public class PaymentService {
             throw new RuntimeException("Razorpay Order ID mismatch");
         }
 
-        // 🔐 Signature verification (skip in dev mode)
+        // 🔐 Verify payment signature
         if (!devMode) {
+
             JSONObject options = new JSONObject();
+
             options.put("razorpay_order_id", razorpayOrderId);
             options.put("razorpay_payment_id", razorpayPaymentId);
             options.put("razorpay_signature", razorpaySignature);
@@ -111,12 +117,11 @@ public class PaymentService {
             }
         }
 
-        // 🔥 Mark payment success & reduce stock
         markSuccessInternal(order, razorpayPaymentId);
     }
 
     // =========================================================
-    // ✅ HANDLE WEBHOOK SUCCESS (PRODUCTION FLOW)
+    // ✅ HANDLE WEBHOOK SUCCESS
     // =========================================================
     @Transactional
     public void handleWebhookSuccess(
@@ -137,11 +142,14 @@ public class PaymentService {
     }
 
     // =========================================================
-    // 🔥 INTERNAL SUCCESS HANDLER (COMMON LOGIC)
+    // 🔥 INTERNAL SUCCESS HANDLER
     // =========================================================
-    private void markSuccessInternal(Order order, String razorpayPaymentId) {
+    private void markSuccessInternal(
+            Order order,
+            String razorpayPaymentId
+    ) {
 
-        // Reduce stock safely via OrderService
+        // Reduce stock safely
         orderService.markPaymentSuccess(order.getId());
 
         order.setPaymentStatus(PaymentStatus.COMPLETED);
@@ -150,7 +158,8 @@ public class PaymentService {
         PaymentTransaction transaction =
                 paymentTransactionRepository
                         .findByRazorpayOrderId(order.getRazorpayOrderId())
-                        .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                        .orElseThrow(() ->
+                                new RuntimeException("Transaction not found"));
 
         transaction.setRazorpayPaymentId(razorpayPaymentId);
         transaction.setPaymentStatus(PaymentStatus.COMPLETED);
@@ -172,7 +181,8 @@ public class PaymentService {
         PaymentTransaction transaction =
                 paymentTransactionRepository
                         .findByRazorpayOrderId(order.getRazorpayOrderId())
-                        .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                        .orElseThrow(() ->
+                                new RuntimeException("Transaction not found"));
 
         transaction.setPaymentStatus(PaymentStatus.FAILED);
         transaction.setTransactionTime(LocalDateTime.now());
