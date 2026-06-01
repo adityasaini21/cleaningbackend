@@ -6,6 +6,7 @@ import com.premchemicals.cleaningbackend.model.enums.OrderStatus;
 import com.premchemicals.cleaningbackend.service.OrderService;
 import com.premchemicals.cleaningbackend.service.PaymentService;
 import com.razorpay.RazorpayException;
+import com.premchemicals.cleaningbackend.dto.AssignDeliveryBoyDTO;
 
 import jakarta.validation.Valid;
 
@@ -35,6 +36,21 @@ public class OrderController {
             @Valid @RequestBody OrderRequestDTO request) {
 
         return orderService.placeOrder(request);
+    }
+
+    @PutMapping("/{orderId}/assign-delivery")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public OrderResponseDTO assignDeliveryBoy(
+
+            @PathVariable Long orderId,
+
+            @RequestBody AssignDeliveryBoyDTO request
+    ) {
+
+        return orderService.assignDeliveryBoy(
+                orderId,
+                request
+        );
     }
 
     // =====================================================

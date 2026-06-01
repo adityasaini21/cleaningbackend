@@ -4,6 +4,7 @@ import com.premchemicals.cleaningbackend.dto.*;
 import com.premchemicals.cleaningbackend.model.*;
 import com.premchemicals.cleaningbackend.model.enums.*;
 import com.premchemicals.cleaningbackend.repository.*;
+import com.premchemicals.cleaningbackend.service.NotificationService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+
+import com.premchemicals.cleaningbackend.model.DeliveryPincode;
 
 import java.time.*;
 import java.util.*;
@@ -24,6 +27,9 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final ProductService productService;
+    private final DeliveryPincodeRepository
+            deliveryPincodeRepository;
+    private final NotificationService notificationService;
 
     // =========================================================
     // CREATE ORDER
@@ -40,13 +46,46 @@ public class OrderService {
         Order order = new Order();
 
         order.setUser(user);
+
         order.setOrderDate(LocalDateTime.now());
+
         order.setCreatedAt(LocalDateTime.now());
-        order.setShippingAddress(request.getShippingAddress());
-        order.setPhoneNumber(request.getPhoneNumber());
+
+        order.setShippingAddress(
+                request.getShippingAddress()
+        );
+
+        order.setPhoneNumber(
+                request.getPhoneNumber()
+        );
+
+// ========================================
+// PINCODE VALIDATION
+// ========================================
+
+        DeliveryPincode deliveryPincode =
+                deliveryPincodeRepository
+                        .findByPincodeAndActiveTrue(
+                                request.getPincode()
+                        )
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.BAD_REQUEST,
+                                        "Delivery not available for this pincode"
+                                )
+                        );
+
+        order.setPincode(
+                deliveryPincode.getPincode()
+        );
+
+// ========================================
 
         PaymentMethod paymentMethod =
-                PaymentMethod.valueOf(request.getPaymentMethod().toUpperCase());
+                PaymentMethod.valueOf(
+                        request.getPaymentMethod()
+                                .toUpperCase()
+                );
 
         order.setPaymentMethod(paymentMethod);
 
@@ -91,8 +130,46 @@ public class OrderService {
 
         orderRepository.save(order);
 
+// ========================================
+// CREATE NOTIFICATION
+// ========================================
+
+        notificationService.createNotification(
+                user,
+                "Order Placed",
+                "Your order #" + order.getId() +
+                        " has been placed successfully."
+        );
+
+        // ========================================
+// ADMIN NOTIFICATIONS
+// ========================================
+
+        List<User> admins =
+                userRepository.findAll()
+                        .stream()
+                        .filter(u -> u.getRole().equals("ROLE_ADMIN"))
+                        .toList();
+
+        for (User admin : admins) {
+
+            notificationService.createNotification(
+
+                    admin,
+
+                    "New Order Received",
+
+                    "New order #" + order.getId() +
+                            " placed by " + user.getUsername()
+            );
+        }
+
+// ========================================
+
         return mapToResponse(order);
     }
+
+
 
     // =========================================================
     // GET MY ORDERS
@@ -134,25 +211,97 @@ public class OrderService {
         return mapToResponse(order);
     }
 
-    // =========================================================
-    // UPDATE ORDER STATUS
-    // =========================================================
-
     @Transactional
-    public OrderResponseDTO updateOrderStatus(Long orderId, OrderStatus newStatus) {
+    public OrderResponseDTO updateOrderStatus(
+            Long orderId,
+            OrderStatus newStatus
+    ) {
 
         Order order = getOrderOrThrow(orderId);
 
         order.setOrderStatus(newStatus);
 
-        if (newStatus == OrderStatus.DELIVERED) {
+// =========================================
+// PAYMENT STATUS SYNC
+// =========================================
 
-            order.setDeliveredAt(LocalDateTime.now());
+        if (order.getPaymentMethod() == PaymentMethod.COD) {
 
-            if (order.getPaymentMethod() == PaymentMethod.COD) {
-                order.setPaymentStatus(PaymentStatus.COMPLETED);
+            if (newStatus == OrderStatus.DELIVERED) {
+
+                order.setDeliveredAt(LocalDateTime.now());
+
+                order.setPaymentStatus(
+                        PaymentStatus.COMPLETED
+                );
+
+            } else {
+
+                order.setPaymentStatus(
+                        PaymentStatus.PENDING
+                );
             }
         }
+
+        // =========================================
+        // NOTIFICATION MESSAGE
+        // =========================================
+
+        String title = "Order Update";
+
+        String message =
+                "Your order #" + order.getId() +
+                        " status changed to " +
+                        newStatus.name().replace("_", " ");
+
+        // =========================================
+        // CUSTOM MESSAGES
+        // =========================================
+
+        switch (newStatus) {
+
+            case CONFIRMED:
+
+                message =
+                        "Your order #" + order.getId() +
+                                " has been confirmed ✅";
+                break;
+
+
+            case OUT_FOR_DELIVERY:
+
+                message =
+                        "Your order #" + order.getId() +
+                                " is out for delivery 📦";
+                break;
+
+            case DELIVERED:
+
+                message =
+                        "Your order #" + order.getId() +
+                                " has been delivered 🎉";
+                break;
+
+            case CANCELLED:
+
+                message =
+                        "Your order #" + order.getId() +
+                                " has been cancelled ❌";
+                break;
+        }
+
+        // =========================================
+        // SEND NOTIFICATION
+        // =========================================
+
+        notificationService.createNotification(
+
+                order.getUser(),
+
+                title,
+
+                message
+        );
 
         return mapToResponse(order);
     }
@@ -354,31 +503,64 @@ public class OrderService {
 
         dto.setOrderId(order.getId());
 
-        // 🔥 FIX: Use createdAt properly
         dto.setCreatedAt(
                 order.getCreatedAt() != null
                         ? order.getCreatedAt()
-                        : order.getOrderDate()   // fallback (important)
+                        : order.getOrderDate()
         );
 
         dto.setTotalAmount(order.getTotalAmount());
+
         dto.setOrderStatus(order.getOrderStatus());
+
         dto.setPaymentStatus(order.getPaymentStatus());
+
         dto.setShippingAddress(order.getShippingAddress());
+
         dto.setPhoneNumber(order.getPhoneNumber());
+        dto.setDeliveryBoyName(
+                order.getDeliveryBoyName()
+        );
 
-        dto.setItems(order.getOrderItems().stream().map(item -> {
+        dto.setDeliveryBoyPhone(
+                order.getDeliveryBoyPhone()
+        );
 
-            OrderResponseDTO.OrderItemResponse r =
-                    new OrderResponseDTO.OrderItemResponse();
+        dto.setPincode(order.getPincode());
 
-            r.setProductName(item.getProduct().getName());
-            r.setQuantity(item.getQuantity());
-            r.setPrice(item.getPrice());
+        dto.setItems(
 
-            return r;
+                order.getOrderItems()
 
-        }).toList());
+                        .stream()
+
+                        .map(item -> {
+
+                            OrderResponseDTO.OrderItemResponse r =
+                                    new OrderResponseDTO.OrderItemResponse();
+
+                            r.setProductId(
+                                    item.getProduct().getId()
+                            );
+
+                            r.setProductName(
+                                    item.getProduct().getName()
+                            );
+
+                            r.setQuantity(
+                                    item.getQuantity()
+                            );
+
+                            r.setPrice(
+                                    item.getPrice()
+                            );
+
+                            return r;
+
+                        })
+
+                        .toList()
+        );
 
         return dto;
     }
@@ -487,28 +669,84 @@ public class OrderService {
 
         LocalDate today = LocalDate.now();
 
-        LocalDateTime startOfDay = today.atStartOfDay();
-        LocalDateTime endOfDay = today.atTime(23,59,59);
+        // =========================================
+        // TODAY
+        // =========================================
+
+        LocalDateTime startOfDay =
+                today.atStartOfDay();
+
+        LocalDateTime endOfDay =
+                today.atTime(23,59,59);
+
+        // =========================================
+        // WEEK
+        // =========================================
+
+        LocalDate startWeek =
+                today.minusDays(6);
+
+        LocalDateTime startOfWeek =
+                startWeek.atStartOfDay();
+
+        LocalDateTime endOfWeek =
+                endOfDay;
+
+        // =========================================
+        // MONTH
+        // =========================================
 
         YearMonth month = YearMonth.now();
 
-        LocalDateTime startOfMonth = month.atDay(1).atStartOfDay();
-        LocalDateTime endOfMonth = month.atEndOfMonth().atTime(23,59,59);
+        LocalDateTime startOfMonth =
+                month.atDay(1).atStartOfDay();
+
+        LocalDateTime endOfMonth =
+                month.atEndOfMonth()
+                        .atTime(23,59,59);
+
+        // =========================================
+        // TODAY STATS
+        // =========================================
 
         long todayOrders =
-                orderRepository.countByOrderDateBetween(startOfDay,endOfDay);
-
-        long completedOrders =
-                orderRepository.countByPaymentStatus(PaymentStatus.COMPLETED);
-
-        long pendingDeliveries =
-                orderRepository.countByOrderStatus(OrderStatus.OUT_FOR_DELIVERY);
+                orderRepository.countByOrderDateBetween(
+                        startOfDay,
+                        endOfDay
+                );
 
         Double todayRevenue =
                 orderRepository.calculateRevenueBetweenDates(
                         PaymentStatus.COMPLETED,
                         startOfDay,
                         endOfDay
+                );
+
+        // =========================================
+        // WEEKLY STATS
+        // =========================================
+
+        long weeklyOrders =
+                orderRepository.countByOrderDateBetween(
+                        startOfWeek,
+                        endOfWeek
+                );
+
+        Double weeklyRevenue =
+                orderRepository.calculateRevenueBetweenDates(
+                        PaymentStatus.COMPLETED,
+                        startOfWeek,
+                        endOfWeek
+                );
+
+        // =========================================
+        // MONTHLY STATS
+        // =========================================
+
+        long monthlyOrders =
+                orderRepository.countByOrderDateBetween(
+                        startOfMonth,
+                        endOfMonth
                 );
 
         Double monthlyRevenue =
@@ -518,17 +756,102 @@ public class OrderService {
                         endOfMonth
                 );
 
+        // =========================================
+        // PROFIT CALCULATION
+        // =========================================
+
+        double todayProfit =
+                (todayRevenue != null
+                        ? todayRevenue : 0) * 0.30;
+
+        double weeklyProfit =
+                (weeklyRevenue != null
+                        ? weeklyRevenue : 0) * 0.30;
+
+        double monthlyProfit =
+                (monthlyRevenue != null
+                        ? monthlyRevenue : 0) * 0.30;
+
+        // =========================================
+        // OTHER STATS
+        // =========================================
+
+        long completedOrders =
+                orderRepository.countByPaymentStatus(
+                        PaymentStatus.COMPLETED
+                );
+
+        long pendingDeliveries =
+                orderRepository.countByOrderStatus(
+                        OrderStatus.OUT_FOR_DELIVERY
+                );
+
         long lowStockCount =
                 productService.getLowStockCount();
 
+        // =========================================
+        // RETURN DTO
+        // =========================================
+
         return DashboardSummaryDTO.builder()
+
+                // TODAY
                 .todayOrders(todayOrders)
+                .todayRevenue(todayRevenue != null
+                        ? todayRevenue : 0)
+                .todayProfit(todayProfit)
+
+                // WEEKLY
+                .weeklyOrders(weeklyOrders)
+                .weeklyRevenue(weeklyRevenue != null
+                        ? weeklyRevenue : 0)
+                .weeklyProfit(weeklyProfit)
+
+                // MONTHLY
+                .monthlyOrders(monthlyOrders)
+                .monthlyRevenue(monthlyRevenue != null
+                        ? monthlyRevenue : 0)
+                .monthlyProfit(monthlyProfit)
+
+                // OTHER
                 .completedOrders(completedOrders)
                 .pendingDeliveries(pendingDeliveries)
-                .todayRevenue(todayRevenue != null ? todayRevenue : 0)
-                .monthlyRevenue(monthlyRevenue != null ? monthlyRevenue : 0)
                 .lowStockCount(lowStockCount)
+
                 .build();
+    }
+
+    @Transactional
+    public OrderResponseDTO assignDeliveryBoy(
+
+            Long orderId,
+
+            AssignDeliveryBoyDTO request
+    ) {
+
+        Order order =
+                getOrderOrThrow(orderId);
+
+        order.setDeliveryBoyName(
+                request.getDeliveryBoyName()
+        );
+
+        order.setDeliveryBoyPhone(
+                request.getDeliveryBoyPhone()
+        );
+
+        notificationService.createNotification(
+
+                order.getUser(),
+
+                "Delivery Partner Assigned",
+
+                "Your delivery partner "
+                        + request.getDeliveryBoyName()
+                        + " has been assigned."
+        );
+
+        return mapToResponse(order);
     }
 
     // =========================================================

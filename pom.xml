@@ -109,6 +109,13 @@
             <version>1.4.4</version>
         </dependency>
 
+        <!-- FIREBASE ADMIN SDK -->
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.3.0</version>
+        </dependency>
+
     </dependencies>
 
     <build>

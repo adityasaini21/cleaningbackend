@@ -52,6 +52,15 @@ public class Order {
     @Column(nullable = false)
     private String phoneNumber;
 
+    @Column(nullable = false)
+    private String pincode;
+
+    @Column
+    private String deliveryBoyName;
+
+    @Column
+    private String deliveryBoyPhone;
+
     @Column(unique = true)
     private String razorpayOrderId;
 

@@ -12,8 +12,9 @@ public class OrderResponseDTO {
 
     private Long orderId;
 
-    // 🔥 MAIN DATE FIELD (USE THIS ONLY)
     private LocalDateTime createdAt;
+
+    private String pincode;
 
     private Double totalAmount;
 
@@ -23,12 +24,22 @@ public class OrderResponseDTO {
     private String shippingAddress;
     private String phoneNumber;
 
+    private String deliveryBoyName;
+
+    private String deliveryBoyPhone;
+
     private List<OrderItemResponse> items;
 
     @Data
     public static class OrderItemResponse {
+
+        // 🔥 REQUIRED FOR REORDER FEATURE
+        private Long productId;
+
         private String productName;
+
         private Integer quantity;
+
         private Double price;
     }
 }
