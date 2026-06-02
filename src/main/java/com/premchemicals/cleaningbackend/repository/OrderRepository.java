@@ -165,6 +165,24 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
        """)
     Double getAverageDeliveryTimeInMinutes();
 
+
+    @Query("""
+SELECT COUNT(o) > 0
+FROM Order o
+JOIN o.orderItems oi
+WHERE o.user.id = :userId
+AND oi.product.id = :productId
+AND o.orderStatus = 'DELIVERED'
+""")
+
+    boolean hasPurchasedProduct(
+
+            Long userId,
+
+            Long productId
+    );
+
+
     // =========================================================
     // 🔥 DASHBOARD COUNT QUERIES
     // =========================================================

@@ -71,8 +71,10 @@ public class AuthController {
     // =========================================
 
     @PostMapping("/login")
+
     public LoginResponseDTO login(
             @RequestBody LoginRequestDTO request) {
+        System.out.println("LOGIN ENDPOINT HIT");
 
         Authentication authentication =
 
@@ -94,7 +96,10 @@ public class AuthController {
                 jwtUtil.generateToken(userDetails);
 
         return new LoginResponseDTO(token);
+
+
     }
+
 
     // =========================================
     // SAVE FCM TOKEN
