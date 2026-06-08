@@ -11,7 +11,7 @@ import com.premchemicals.cleaningbackend.repository.ProductRepository;
 import com.premchemicals.cleaningbackend.repository.ReviewRepository;
 import com.premchemicals.cleaningbackend.repository.UserRepository;
 import com.premchemicals.cleaningbackend.repository.OrderRepository;
-
+import org.springframework.transaction.annotation.Transactional;
 import com.premchemicals.cleaningbackend.service.ReviewService;
 
 import lombok.RequiredArgsConstructor;
@@ -118,6 +118,7 @@ public class ReviewServiceImpl
     // =========================================
 
     @Override
+    @Transactional(readOnly = true)
     public List<ReviewResponseDTO>
     getProductReviews(Long productId) {
 

@@ -74,6 +74,7 @@ public class SecurityConfig {
                                 "/auth/login",
 
                                 "/auth/register",
+
                                 "/api/notifications/test"
 
                         ).permitAll()
@@ -114,6 +115,15 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/api/pincode/**"
+                        ).permitAll()
+
+                        // =====================================
+                        // REVIEWS (PUBLIC READ)
+                        // =====================================
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/reviews/**"
                         ).permitAll()
 
                         // =====================================
@@ -188,7 +198,6 @@ public class SecurityConfig {
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source =
-
                 new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration(
