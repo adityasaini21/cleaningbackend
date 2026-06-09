@@ -48,4 +48,16 @@ public class ReviewController {
         return reviewService
                 .getProductReviews(productId);
     }
+    @GetMapping("/can-review/{productId}")
+    @PreAuthorize("isAuthenticated()")
+    public boolean canReview(
+
+            @PathVariable
+            Long productId
+    ) {
+
+        return reviewService.canReview(
+                productId
+        );
+    }
 }

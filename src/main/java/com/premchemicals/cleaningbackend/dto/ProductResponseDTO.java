@@ -24,4 +24,12 @@ public class ProductResponseDTO {
     private Long categoryId;
 
     private String categoryName;
+
+    // =========================================
+    // REVIEWS
+    // =========================================
+
+    private Double averageRating;
+
+    private Long reviewCount;
 }

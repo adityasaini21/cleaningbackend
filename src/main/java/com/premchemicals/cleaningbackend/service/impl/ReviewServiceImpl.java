@@ -151,4 +151,34 @@ public class ReviewServiceImpl
                 )
                 .toList();
     }
+
+    @Override
+    public boolean canReview(
+            Long productId
+    ) {
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        String username =
+                authentication.getName();
+
+        User user =
+                userRepository
+                        .findByUsername(username)
+                        .orElseThrow();
+
+        Product product =
+                productRepository
+                        .findById(productId)
+                        .orElseThrow();
+
+        return orderRepository
+                .hasPurchasedProduct(
+                        user.getId(),
+                        product.getId()
+                );
+    }
 }

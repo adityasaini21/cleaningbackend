@@ -14,4 +14,7 @@ public interface ReviewService {
     List<ReviewResponseDTO> getProductReviews(
             Long productId
     );
+    boolean canReview(
+            Long productId
+    );
 }

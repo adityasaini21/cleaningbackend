@@ -22,6 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import com.premchemicals.cleaningbackend.repository.ReviewRepository;
+
 
 import java.util.List;
 
@@ -32,6 +34,7 @@ public class ProductService {
     private final ProductRepository productRepository;
 
     private final CategoryRepository categoryRepository;
+    private final ReviewRepository reviewRepository;
 
     // =========================================
     // 🔥 MAIN PRODUCT LIST
@@ -69,7 +72,36 @@ public class ProductService {
         }
 
         return products.stream()
-                .map(ProductMapper::toDTO)
+                .map(product -> {
+
+                    ProductResponseDTO dto =
+                            ProductMapper.toDTO(product);
+
+                    dto.setAverageRating(
+
+                            reviewRepository
+                                    .getAverageRating(
+                                            product.getId()
+                                    ) == null
+
+                                    ? 0.0
+
+                                    : reviewRepository
+                                    .getAverageRating(
+                                            product.getId()
+                                    )
+                    );
+
+                    dto.setReviewCount(
+
+                            reviewRepository
+                                    .getReviewCount(
+                                            product.getId()
+                                    )
+                    );
+
+                    return dto;
+                })
                 .toList();
     }
 
@@ -82,7 +114,36 @@ public class ProductService {
 
         return productRepository
                 .findActiveProductsWithCategory(pageable)
-                .map(ProductMapper::toDTO);
+                .map(product -> {
+
+                    ProductResponseDTO dto =
+                            ProductMapper.toDTO(product);
+
+                    dto.setAverageRating(
+
+                            reviewRepository
+                                    .getAverageRating(
+                                            product.getId()
+                                    ) == null
+
+                                    ? 0.0
+
+                                    : reviewRepository
+                                    .getAverageRating(
+                                            product.getId()
+                                    )
+                    );
+
+                    dto.setReviewCount(
+
+                            reviewRepository
+                                    .getReviewCount(
+                                            product.getId()
+                                    )
+                    );
+
+                    return dto;
+                });
     }
 
     // =========================================
@@ -223,7 +284,36 @@ public class ProductService {
         return productRepository
                 .findDeletedProducts()
                 .stream()
-                .map(ProductMapper::toDTO)
+                .map(product -> {
+
+                    ProductResponseDTO dto =
+                            ProductMapper.toDTO(product);
+
+                    dto.setAverageRating(
+
+                            reviewRepository
+                                    .getAverageRating(
+                                            product.getId()
+                                    ) == null
+
+                                    ? 0.0
+
+                                    : reviewRepository
+                                    .getAverageRating(
+                                            product.getId()
+                                    )
+                    );
+
+                    dto.setReviewCount(
+
+                            reviewRepository
+                                    .getReviewCount(
+                                            product.getId()
+                                    )
+                    );
+
+                    return dto;
+                })
                 .toList();
     }
 
@@ -270,7 +360,36 @@ public class ProductService {
                         DEFAULT_LOW_STOCK_THRESHOLD
                 )
                 .stream()
-                .map(ProductMapper::toDTO)
+                .map(product -> {
+
+                    ProductResponseDTO dto =
+                            ProductMapper.toDTO(product);
+
+                    dto.setAverageRating(
+
+                            reviewRepository
+                                    .getAverageRating(
+                                            product.getId()
+                                    ) == null
+
+                                    ? 0.0
+
+                                    : reviewRepository
+                                    .getAverageRating(
+                                            product.getId()
+                                    )
+                    );
+
+                    dto.setReviewCount(
+
+                            reviewRepository
+                                    .getReviewCount(
+                                            product.getId()
+                                    )
+                    );
+
+                    return dto;
+                })
                 .toList();
     }
 
