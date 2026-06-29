@@ -41,6 +41,7 @@ public class ReviewServiceImpl
     // =========================================
 
     @Override
+    @Transactional
     public ReviewResponseDTO addReview(
             ReviewRequestDTO request) {
 
@@ -103,13 +104,11 @@ public class ReviewServiceImpl
         return ReviewResponseDTO
                 .builder()
                 .id(saved.getId())
-                .username(
-                        saved.getUser()
-                                .getUsername()
-                )
+                .username(user.getUsername())
                 .rating(saved.getRating())
                 .comment(saved.getComment())
                 .createdAt(saved.getCreatedAt())
+                .updatedAt(saved.getUpdatedAt())
                 .build();
     }
 
@@ -144,9 +143,10 @@ public class ReviewServiceImpl
                                 .comment(
                                         review.getComment()
                                 )
-                                .createdAt(
-                                        review.getCreatedAt()
-                                )
+                                .createdAt(review.getCreatedAt())
+
+                                .updatedAt(review.getUpdatedAt())
+
                                 .build()
                 )
                 .toList();

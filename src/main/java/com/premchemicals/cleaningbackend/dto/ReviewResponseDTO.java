@@ -18,4 +18,6 @@ public class ReviewResponseDTO {
     private String comment;
 
     private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 }

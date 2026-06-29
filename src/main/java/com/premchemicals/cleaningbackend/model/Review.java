@@ -40,6 +40,8 @@ public class Review {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+    @Column
+    private LocalDateTime updatedAt;
 
     // ==================================
     // USER
@@ -67,5 +69,12 @@ public class Review {
     public void prePersist() {
 
         createdAt = LocalDateTime.now();
+    }
+    @PreUpdate
+
+    public void preUpdate() {
+
+        updatedAt = LocalDateTime.now();
+
     }
 }
