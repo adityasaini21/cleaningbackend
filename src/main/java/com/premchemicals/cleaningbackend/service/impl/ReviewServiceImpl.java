@@ -20,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import org.springframework.stereotype.Service;
+import com.premchemicals.cleaningbackend.dto.ReviewSummaryDTO;
 
 import java.util.List;
 
@@ -118,38 +119,74 @@ public class ReviewServiceImpl
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReviewResponseDTO>
-    getProductReviews(Long productId) {
+    public ReviewSummaryDTO getProductReviews(
+            Long productId
+    ) {
 
         Product product =
                 productRepository
                         .findById(productId)
                         .orElseThrow();
 
-        return reviewRepository
-                .findByProduct(product)
-                .stream()
-                .map(review ->
-                        ReviewResponseDTO
-                                .builder()
-                                .id(review.getId())
-                                .username(
-                                        review.getUser()
-                                                .getUsername()
-                                )
-                                .rating(
-                                        review.getRating()
-                                )
-                                .comment(
-                                        review.getComment()
-                                )
-                                .createdAt(review.getCreatedAt())
+        List<Review> reviews =
+                reviewRepository.findByProduct(product);
 
-                                .updatedAt(review.getUpdatedAt())
+        int reviewCount = reviews.size();
 
-                                .build()
+        double averageRating =
+                reviews.stream()
+                        .mapToInt(Review::getRating)
+                        .average()
+                        .orElse(0.0);
+
+        int fiveStar = (int) reviews.stream()
+                .filter(r -> r.getRating() == 5)
+                .count();
+
+        int fourStar = (int) reviews.stream()
+                .filter(r -> r.getRating() == 4)
+                .count();
+
+        int threeStar = (int) reviews.stream()
+                .filter(r -> r.getRating() == 3)
+                .count();
+
+        int twoStar = (int) reviews.stream()
+                .filter(r -> r.getRating() == 2)
+                .count();
+
+        int oneStar = (int) reviews.stream()
+                .filter(r -> r.getRating() == 1)
+                .count();
+
+        List<ReviewResponseDTO> reviewDTOs =
+                reviews.stream()
+                        .map(review ->
+                                ReviewResponseDTO
+                                        .builder()
+                                        .id(review.getId())
+                                        .username(review.getUser().getUsername())
+                                        .rating(review.getRating())
+                                        .comment(review.getComment())
+                                        .createdAt(review.getCreatedAt())
+                                        .updatedAt(review.getUpdatedAt())
+                                        .build()
+                        )
+                        .toList();
+
+        return ReviewSummaryDTO
+                .builder()
+                .averageRating(
+                        Math.round(averageRating * 10.0) / 10.0
                 )
-                .toList();
+                .reviewCount(reviewCount)
+                .fiveStar(fiveStar)
+                .fourStar(fourStar)
+                .threeStar(threeStar)
+                .twoStar(twoStar)
+                .oneStar(oneStar)
+                .reviews(reviewDTOs)
+                .build();
     }
 
     @Override

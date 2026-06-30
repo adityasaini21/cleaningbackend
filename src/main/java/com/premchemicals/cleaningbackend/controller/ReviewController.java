@@ -2,6 +2,7 @@ package com.premchemicals.cleaningbackend.controller;
 
 import com.premchemicals.cleaningbackend.dto.ReviewRequestDTO;
 import com.premchemicals.cleaningbackend.dto.ReviewResponseDTO;
+import com.premchemicals.cleaningbackend.dto.ReviewSummaryDTO;
 import com.premchemicals.cleaningbackend.service.ReviewService;
 
 import lombok.RequiredArgsConstructor;
@@ -40,7 +41,7 @@ public class ReviewController {
     // ======================================
 
     @GetMapping("/product/{productId}")
-    public List<ReviewResponseDTO> getProductReviews(
+    public ReviewSummaryDTO getProductReviews(
 
             @PathVariable Long productId
     ) {

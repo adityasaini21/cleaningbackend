@@ -2,6 +2,7 @@ package com.premchemicals.cleaningbackend.service;
 
 import com.premchemicals.cleaningbackend.dto.ReviewRequestDTO;
 import com.premchemicals.cleaningbackend.dto.ReviewResponseDTO;
+import com.premchemicals.cleaningbackend.dto.ReviewSummaryDTO;
 
 import java.util.List;
 
@@ -11,9 +12,7 @@ public interface ReviewService {
             ReviewRequestDTO request
     );
 
-    List<ReviewResponseDTO> getProductReviews(
-            Long productId
-    );
+    ReviewSummaryDTO getProductReviews(Long productId);
     boolean canReview(
             Long productId
     );
