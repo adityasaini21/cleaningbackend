@@ -8,6 +8,8 @@ import java.util.List;
 
 public interface ReviewService {
 
+
+
     ReviewResponseDTO addReview(
             ReviewRequestDTO request
     );
@@ -15,5 +17,16 @@ public interface ReviewService {
     ReviewSummaryDTO getProductReviews(Long productId);
     boolean canReview(
             Long productId
+    );
+    // =========================================
+
+    // 👍 MARK REVIEW AS HELPFUL
+
+    // =========================================
+
+    void markHelpful(
+
+            Long reviewId
+
     );
 }

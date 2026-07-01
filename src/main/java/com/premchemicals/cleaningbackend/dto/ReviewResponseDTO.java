@@ -20,4 +20,10 @@ public class ReviewResponseDTO {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private boolean verifiedPurchase;
+
+    private Long helpfulCount;
+
+    private boolean helpfulByCurrentUser;
 }

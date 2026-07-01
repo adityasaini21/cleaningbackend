@@ -21,6 +21,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import org.springframework.stereotype.Service;
 import com.premchemicals.cleaningbackend.dto.ReviewSummaryDTO;
+import com.premchemicals.cleaningbackend.repository.ReviewHelpfulRepository;
+import com.premchemicals.cleaningbackend.model.ReviewHelpful;
 
 import java.util.List;
 
@@ -36,6 +38,7 @@ public class ReviewServiceImpl
     private final UserRepository userRepository;
 
     private final OrderRepository orderRepository;
+    private final ReviewHelpfulRepository reviewHelpfulRepository;
 
     // =========================================
     // ADD REVIEW
@@ -110,6 +113,7 @@ public class ReviewServiceImpl
                 .comment(saved.getComment())
                 .createdAt(saved.getCreatedAt())
                 .updatedAt(saved.getUpdatedAt())
+                .verifiedPurchase(true)
                 .build();
     }
 
@@ -161,17 +165,57 @@ public class ReviewServiceImpl
 
         List<ReviewResponseDTO> reviewDTOs =
                 reviews.stream()
-                        .map(review ->
-                                ReviewResponseDTO
-                                        .builder()
-                                        .id(review.getId())
-                                        .username(review.getUser().getUsername())
-                                        .rating(review.getRating())
-                                        .comment(review.getComment())
-                                        .createdAt(review.getCreatedAt())
-                                        .updatedAt(review.getUpdatedAt())
-                                        .build()
-                        )
+                        .map(review -> {
+
+                            Authentication authentication =
+                                    SecurityContextHolder
+                                            .getContext()
+                                            .getAuthentication();
+
+                            User currentUser = null;
+
+                            if (authentication != null &&
+                                    authentication.isAuthenticated() &&
+                                    !"anonymousUser".equals(authentication.getName())) {
+
+                                currentUser = userRepository
+                                        .findByUsername(authentication.getName())
+                                        .orElse(null);
+                            }
+
+                            long helpfulCount =
+                                    reviewHelpfulRepository
+                                            .countByReview(review);
+
+                            boolean helpfulByCurrentUser =
+                                    currentUser != null &&
+                                            reviewHelpfulRepository.existsByReviewAndUser(
+                                                    review,
+                                                    currentUser
+                                            );
+
+                            return ReviewResponseDTO.builder()
+
+                                    .id(review.getId())
+
+                                    .username(review.getUser().getUsername())
+
+                                    .rating(review.getRating())
+
+                                    .comment(review.getComment())
+
+                                    .createdAt(review.getCreatedAt())
+
+                                    .updatedAt(review.getUpdatedAt())
+
+                                    .verifiedPurchase(true)
+
+                                    .helpfulCount(helpfulCount)
+
+                                    .helpfulByCurrentUser(helpfulByCurrentUser)
+
+                                    .build();
+                        })
                         .toList();
 
         return ReviewSummaryDTO
@@ -217,5 +261,51 @@ public class ReviewServiceImpl
                         user.getId(),
                         product.getId()
                 );
+    }
+
+    @Override
+    @Transactional
+    public void markHelpful(Long reviewId) {
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        String username =
+                authentication.getName();
+
+        User user =
+                userRepository
+                        .findByUsername(username)
+                        .orElseThrow();
+
+        Review review =
+                reviewRepository
+                        .findById(reviewId)
+                        .orElseThrow();
+
+        boolean alreadyMarked =
+                reviewHelpfulRepository
+                        .existsByReviewAndUser(
+                                review,
+                                user
+                        );
+
+        if (alreadyMarked) {
+
+            return;
+        }
+
+        ReviewHelpful helpful =
+                ReviewHelpful.builder()
+
+                        .review(review)
+
+                        .user(user)
+
+                        .build();
+
+        reviewHelpfulRepository.save(helpful);
     }
 }
