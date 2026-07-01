@@ -61,4 +61,21 @@ public class ReviewController {
                 productId
         );
     }
+
+    // ======================================
+// MARK REVIEW HELPFUL
+// ======================================
+
+    @PostMapping("/{reviewId}/helpful")
+    @PreAuthorize("isAuthenticated()")
+    public void markHelpful(
+
+            @PathVariable
+            Long reviewId
+    ) {
+
+        reviewService.markHelpful(
+                reviewId
+        );
+    }
 }

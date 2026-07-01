@@ -26,4 +26,5 @@ public class ReviewResponseDTO {
     private Long helpfulCount;
 
     private boolean helpfulByCurrentUser;
+    private boolean ownReview;
 }

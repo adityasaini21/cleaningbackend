@@ -168,31 +168,52 @@ public class ReviewServiceImpl
                         .map(review -> {
 
                             Authentication authentication =
+
                                     SecurityContextHolder
+
                                             .getContext()
+
                                             .getAuthentication();
 
                             User currentUser = null;
 
                             if (authentication != null &&
+
                                     authentication.isAuthenticated() &&
+
                                     !"anonymousUser".equals(authentication.getName())) {
 
                                 currentUser = userRepository
+
                                         .findByUsername(authentication.getName())
+
                                         .orElse(null);
+
                             }
 
                             long helpfulCount =
+
                                     reviewHelpfulRepository
+
                                             .countByReview(review);
 
                             boolean helpfulByCurrentUser =
+
                                     currentUser != null &&
+
                                             reviewHelpfulRepository.existsByReviewAndUser(
+
                                                     review,
+
                                                     currentUser
+
                                             );
+
+                            boolean ownReview =
+
+                                    currentUser != null &&
+
+                                            review.getUser().getId().equals(currentUser.getId());
 
                             return ReviewResponseDTO.builder()
 
@@ -214,8 +235,12 @@ public class ReviewServiceImpl
 
                                     .helpfulByCurrentUser(helpfulByCurrentUser)
 
+                                    .ownReview(ownReview)
+
                                     .build();
+
                         })
+
                         .toList();
 
         return ReviewSummaryDTO
@@ -285,6 +310,14 @@ public class ReviewServiceImpl
                         .findById(reviewId)
                         .orElseThrow();
 
+        // Don't allow marking your own review
+        if (review.getUser().getId().equals(user.getId())) {
+
+            throw new RuntimeException(
+                    "You cannot mark your own review as helpful."
+            );
+        }
+
         boolean alreadyMarked =
                 reviewHelpfulRepository
                         .existsByReviewAndUser(
@@ -299,11 +332,8 @@ public class ReviewServiceImpl
 
         ReviewHelpful helpful =
                 ReviewHelpful.builder()
-
                         .review(review)
-
                         .user(user)
-
                         .build();
 
         reviewHelpfulRepository.save(helpful);
