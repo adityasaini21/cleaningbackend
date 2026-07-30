@@ -2,6 +2,8 @@ package com.premchemicals.cleaningbackend.dto;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class ReviewRequestDTO {
 
@@ -10,4 +12,10 @@ public class ReviewRequestDTO {
     private Integer rating;
 
     private String comment;
+
+    // ======================================
+    // CLOUDINARY IMAGE URLS
+    // ======================================
+
+    private List<String> imageUrls;
 }

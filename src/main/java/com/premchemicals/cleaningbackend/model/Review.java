@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(
@@ -28,18 +30,27 @@ public class Review {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ⭐ 1-5 Rating
+    // ==================================
+    // RATING
+    // ==================================
 
     @Column(nullable = false)
     private Integer rating;
 
-    // 📝 Review Text
+    // ==================================
+    // COMMENT
+    // ==================================
 
     @Column(length = 1000)
     private String comment;
 
+    // ==================================
+    // DATES
+    // ==================================
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
     @Column
     private LocalDateTime updatedAt;
 
@@ -65,16 +76,36 @@ public class Review {
     )
     private Product product;
 
+    // ==================================
+    // REVIEW IMAGES
+    // ==================================
+
+    @OneToMany(
+
+            mappedBy = "review",
+
+            cascade = CascadeType.ALL,
+
+            orphanRemoval = true,
+
+            fetch = FetchType.LAZY
+    )
+    @Builder.Default
+    private List<ReviewImage> images = new ArrayList<>();
+
+    // ==================================
+    // TIMESTAMPS
+    // ==================================
+
     @PrePersist
     public void prePersist() {
 
         createdAt = LocalDateTime.now();
     }
-    @PreUpdate
 
+    @PreUpdate
     public void preUpdate() {
 
         updatedAt = LocalDateTime.now();
-
     }
 }
