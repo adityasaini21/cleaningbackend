@@ -12,6 +12,7 @@ import com.razorpay.Utils;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,8 +20,12 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        prefix = "razorpay.key",
+        name = {"id", "secret"},
+        matchIfMissing = false
+)
 public class PaymentService {
-
     private final OrderRepository orderRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final OrderService orderService;

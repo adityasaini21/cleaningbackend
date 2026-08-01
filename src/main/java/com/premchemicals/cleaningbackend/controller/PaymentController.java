@@ -9,9 +9,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        prefix = "razorpay.key",
+        name = {"id", "secret"},
+        matchIfMissing = false
+)
 public class PaymentController {
 
     private final PaymentService paymentService;
