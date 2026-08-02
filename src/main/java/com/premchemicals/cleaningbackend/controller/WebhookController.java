@@ -20,7 +20,7 @@ public class WebhookController {
 
     private final PaymentService paymentService;
 
-    @Value("${razorpay.webhook.secret}")
+    @Value("${razorpay.webhook.secret:}")
     private String webhookSecret;
 
     @PostMapping("/razorpay")
@@ -28,6 +28,10 @@ public class WebhookController {
             @RequestBody String payload,
             @RequestHeader("X-Razorpay-Signature") String signature
     ) {
+
+        if (webhookSecret.isBlank()) {
+            return ResponseEntity.ok("Webhook disabled");
+        }
 
         try {
 

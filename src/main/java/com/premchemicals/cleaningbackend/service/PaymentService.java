@@ -20,21 +20,15 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(
-        prefix = "razorpay.key",
-        name = {"id", "secret"},
-        matchIfMissing = false
-)
 public class PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final OrderService orderService;
 
-    // ✅ FIXED PROPERTY NAMES
-    @Value("${razorpay.key.id}")
+    @Value("${razorpay.key.id:}")
     private String keyId;
 
-    @Value("${razorpay.key.secret}")
+    @Value("${razorpay.key.secret:}")
     private String keySecret;
 
     @Value("${payment.dev-mode:false}")
@@ -43,8 +37,15 @@ public class PaymentService {
     // =========================================================
     // ✅ CREATE RAZORPAY ORDER
     // =========================================================
+
+
     @Transactional
+
     public String createRazorpayOrder(Long orderId) throws RazorpayException {
+        if (keyId.isBlank() || keySecret.isBlank()) {
+            throw new UnsupportedOperationException(
+                    "Razorpay integration is disabled.");
+        }
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
@@ -97,6 +98,10 @@ public class PaymentService {
             String razorpayPaymentId,
             String razorpaySignature
     ) throws RazorpayException {
+        if (keyId.isBlank() || keySecret.isBlank()) {
+            throw new UnsupportedOperationException(
+                    "Razorpay integration is disabled.");
+        }
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
