@@ -7,15 +7,11 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+//import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 @RestController
 @RequestMapping("/api/webhooks")
 @RequiredArgsConstructor
-@ConditionalOnProperty(
-        prefix = "razorpay.key",
-        name = {"id", "secret"},
-        matchIfMissing = false
-)
+
 public class WebhookController {
 
     private final PaymentService paymentService;
