@@ -19,32 +19,25 @@ public class FirebaseConfig {
             InputStream serviceAccount =
                     getClass()
                             .getClassLoader()
-                            .getResourceAsStream(
-                                    "firebase-service-account.json"
-                            );
+                            .getResourceAsStream("firebase-service-account.json");
+
+            if (serviceAccount == null) {
+                System.out.println("Firebase disabled: service account file not found.");
+                return;
+            }
 
             FirebaseOptions options =
                     FirebaseOptions.builder()
-
-                            .setCredentials(
-                                    GoogleCredentials.fromStream(
-                                            serviceAccount
-                                    )
-                            )
-
+                            .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                             .build();
 
             if (FirebaseApp.getApps().isEmpty()) {
-
                 FirebaseApp.initializeApp(options);
-
-                System.out.println(
-                        "FIREBASE INITIALIZED SUCCESSFULLY"
-                );
+                System.out.println("Firebase initialized successfully.");
             }
 
         } catch (Exception e) {
-
+            System.out.println("Firebase initialization skipped.");
             e.printStackTrace();
         }
     }
