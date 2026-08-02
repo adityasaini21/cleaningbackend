@@ -18,21 +18,21 @@ public class PaymentWebhookController {
 
     private final PaymentService paymentService;
 
-    @Value("${razorpay.webhook.secret}")
+    @Value("${razorpay.webhook.secret:}")
     private String webhookSecret;
 
-    // =====================================
-    // ✅ RAZORPAY WEBHOOK ENDPOINT
-    // =====================================
     @PostMapping("/webhook")
     public String handleWebhook(
             HttpServletRequest request,
-            @RequestHeader("X-Razorpay-Signature") String razorpaySignature
+            @RequestHeader(value = "X-Razorpay-Signature", required = false) String razorpaySignature
     ) throws Exception {
+
+        if (webhookSecret.isBlank()) {
+            return "Razorpay webhook disabled";
+        }
 
         String payload = getBody(request);
 
-        // 🔐 Verify webhook signature
         boolean isValid = Utils.verifyWebhookSignature(
                 payload,
                 razorpaySignature,
@@ -46,9 +46,6 @@ public class PaymentWebhookController {
         JSONObject jsonObject = new JSONObject(payload);
         String event = jsonObject.getString("event");
 
-        // =====================================
-        // ✅ HANDLE PAYMENT CAPTURED EVENT
-        // =====================================
         if ("payment.captured".equals(event)) {
 
             JSONObject paymentEntity =
@@ -62,24 +59,17 @@ public class PaymentWebhookController {
             String razorpayPaymentId =
                     paymentEntity.getString("id");
 
-            String razorpaySignatureHeader =
-                    razorpaySignature;
-
-            // Call secure verification service
             paymentService.verifyAndMarkPaymentSuccess(
-                    null, // orderId not needed here
+                    null,
                     razorpayOrderId,
                     razorpayPaymentId,
-                    razorpaySignatureHeader
+                    razorpaySignature
             );
         }
 
         return "Webhook processed successfully";
     }
 
-    // =====================================
-    // 🔁 Read request body manually
-    // =====================================
     private String getBody(HttpServletRequest request)
             throws IOException {
 
