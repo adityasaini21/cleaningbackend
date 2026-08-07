@@ -38,10 +38,12 @@ public class OrderService {
     @Transactional
     public OrderResponseDTO placeOrder(OrderRequestDTO request) {
 
-        String username = getLoggedInUsername();
+        String phoneNumber = getLoggedInPhoneNumber();
 
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository
+                .findByPhoneNumber(phoneNumber)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
 
         Order order = new Order();
 
@@ -148,7 +150,7 @@ public class OrderService {
         List<User> admins =
                 userRepository.findAll()
                         .stream()
-                        .filter(u -> u.getRole().equals("ROLE_ADMIN"))
+                        .filter(u -> u.getRole() == Role.ROLE_ADMIN)
                         .toList();
 
         for (User admin : admins) {
@@ -160,7 +162,7 @@ public class OrderService {
                     "New Order Received",
 
                     "New order #" + order.getId() +
-                            " placed by " + user.getUsername()
+                            " placed by " + user.getFullName()
             );
         }
 
@@ -177,7 +179,7 @@ public class OrderService {
 
     public List<OrderResponseDTO> getMyOrders() {
 
-        User user = userRepository.findByUsername(getLoggedInUsername())
+        User user = userRepository.findByPhoneNumber(getLoggedInPhoneNumber())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return orderRepository.findByUser(user)
@@ -486,7 +488,8 @@ public class OrderService {
     // PRIVATE HELPERS
     // =========================================================
 
-    private String getLoggedInUsername() {
+    private String getLoggedInPhoneNumber() {
+
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 

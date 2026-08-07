@@ -27,13 +27,16 @@ public class NotificationService {
     // GET TEST USER
     // =========================================
 
-    public User getTestUser() {
-
-        return userRepository
-                .findByUsername("admin")
-                .orElseThrow(() ->
-                        new RuntimeException("Admin user not found"));
-    }
+//    public User getTestUser() {
+//
+//        return userRepository
+//                .findByPhoneNumber("9795611275")
+//                .orElseThrow(() ->
+//                        new RuntimeException("Admin user not found"));
+//    }
+public User getTestUser() {
+    throw new UnsupportedOperationException("Not used");
+}
 
     // =========================================
     // CREATE + SEND NOTIFICATION
@@ -109,7 +112,7 @@ public class NotificationService {
     getMyNotifications() {
 
         User user = userRepository
-                .findByUsername(getLoggedInUsername())
+                .findByPhoneNumber(getLoggedInPhoneNumber())
                 .orElseThrow(() ->
                         new RuntimeException("User not found"));
 
@@ -145,7 +148,7 @@ public class NotificationService {
     public long getUnreadCount() {
 
         User user = userRepository
-                .findByUsername(getLoggedInUsername())
+                .findByPhoneNumber(getLoggedInPhoneNumber())
                 .orElseThrow(() ->
                         new RuntimeException("User not found"));
 
@@ -177,7 +180,7 @@ public class NotificationService {
     // HELPER
     // =========================================
 
-    private String getLoggedInUsername() {
+    private String getLoggedInPhoneNumber() {
 
         return SecurityContextHolder
                 .getContext()

@@ -79,8 +79,8 @@ public class JwtUtil {
     }
 
     // ✅ Validate Token
-    public boolean validateToken(String token, String username) {
-        return extractUsername(token).equals(username)
+    public boolean validateToken(String token, String phoneNumber) {
+        return extractUsername(token).equals(phoneNumber)
                 && !isTokenExpired(token);
     }
 

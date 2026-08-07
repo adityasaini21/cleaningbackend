@@ -4,6 +4,7 @@ import com.premchemicals.cleaningbackend.dto.LoginRequestDTO;
 import com.premchemicals.cleaningbackend.dto.LoginResponseDTO;
 import com.premchemicals.cleaningbackend.dto.SaveFcmTokenRequest;
 import com.premchemicals.cleaningbackend.model.User;
+import com.premchemicals.cleaningbackend.model.enums.Role;
 import com.premchemicals.cleaningbackend.repository.UserRepository;
 import com.premchemicals.cleaningbackend.security.JwtUtil;
 
@@ -31,25 +32,25 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
 
     // =========================================
-    // REGISTER
+    // REGISTER CUSTOMER
     // =========================================
 
     @PostMapping("/register")
     public String register(
-            @RequestBody User request) {
+            @RequestBody User request
+    ) {
 
-        if (userRepository.findByUsername(
-                request.getUsername()
-        ).isPresent()) {
+        String phoneNumber =
+                request.getPhoneNumber().trim();
 
-            return "Username already exists";
+        if (userRepository.existsByPhoneNumber(phoneNumber)) {
+
+            return "Phone number already registered";
         }
 
         User user = new User();
 
-        user.setUsername(
-                request.getUsername()
-        );
+        user.setPhoneNumber(phoneNumber);
 
         user.setPassword(
                 passwordEncoder.encode(
@@ -57,9 +58,49 @@ public class AuthController {
                 )
         );
 
-        user.setRole(
-                "ROLE_" + request.getRole()
+        user.setRole(Role.ROLE_USER);
+
+        user.setActive(true);
+
+        user.setFullName(
+                request.getFullName().trim()
         );
+
+        if (request.getEmail() != null) {
+            user.setEmail(
+                    request.getEmail().trim()
+            );
+        }
+
+        if (request.getAddress() != null) {
+            user.setAddress(
+                    request.getAddress().trim()
+            );
+        }
+
+        if (request.getCity() != null) {
+            user.setCity(
+                    request.getCity().trim()
+            );
+        }
+
+        if (request.getState() != null) {
+            user.setState(
+                    request.getState().trim()
+            );
+        }
+
+        if (request.getPincode() != null) {
+            user.setPincode(
+                    request.getPincode().trim()
+            );
+        }
+
+        if (request.getLandmark() != null) {
+            user.setLandmark(
+                    request.getLandmark().trim()
+            );
+        }
 
         userRepository.save(user);
 
@@ -71,35 +112,29 @@ public class AuthController {
     // =========================================
 
     @PostMapping("/login")
-
     public LoginResponseDTO login(
-            @RequestBody LoginRequestDTO request) {
-        System.out.println("LOGIN ENDPOINT HIT");
+            @RequestBody LoginRequestDTO request
+    ) {
 
         Authentication authentication =
-
                 authenticationManager.authenticate(
 
                         new UsernamePasswordAuthenticationToken(
 
-                                request.getUsername(),
+                                request.getPhoneNumber().trim(),
 
                                 request.getPassword()
                         )
                 );
 
         UserDetails userDetails =
-                (UserDetails)
-                        authentication.getPrincipal();
+                (UserDetails) authentication.getPrincipal();
 
         String token =
                 jwtUtil.generateToken(userDetails);
 
         return new LoginResponseDTO(token);
-
-
     }
-
 
     // =========================================
     // SAVE FCM TOKEN
@@ -107,30 +142,32 @@ public class AuthController {
 
     @PostMapping("/save-fcm-token")
     public String saveFcmToken(
+
             @RequestBody SaveFcmTokenRequest request,
-            Authentication authentication) {
 
-        String username =
+            Authentication authentication
+    ) {
+
+        String phoneNumber =
                 authentication.getName();
-
-        System.out.println(
-                "FCM SAVE USER: " + username
-        );
 
         User user =
                 userRepository
-                        .findByUsername(username)
+                        .findByPhoneNumber(phoneNumber)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "User not found"
                                 )
                         );
 
-        user.setFcmToken(
-                request.getFcmToken()
-        );
+        if (request.getFcmToken() != null) {
 
-        userRepository.save(user);
+            user.setFcmToken(
+                    request.getFcmToken().trim()
+            );
+
+            userRepository.save(user);
+        }
 
         return "FCM token saved successfully";
     }

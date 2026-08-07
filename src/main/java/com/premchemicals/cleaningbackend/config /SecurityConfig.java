@@ -83,9 +83,9 @@ public class SecurityConfig {
                         // FCM TOKEN API
                         // =====================================
 
-                        .requestMatchers(
-                                "/api/users/save-fcm-token"
-                        ).authenticated()
+                                .requestMatchers(
+                                        "/auth/save-fcm-token"
+                                ).authenticated()
 
                         // =====================================
                         // UPLOADS
@@ -149,6 +149,14 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/webhooks/**"
                         ).permitAll()
+
+                                // =====================================
+// ADMIN APIs
+// =====================================
+
+                                .requestMatchers(
+                                        "/admin/**"
+                                ).hasRole("ADMIN")
 
                         // =====================================
                         // EVERYTHING ELSE
