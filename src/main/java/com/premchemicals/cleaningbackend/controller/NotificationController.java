@@ -91,4 +91,19 @@ public class NotificationController {
                 count
         );
     }
+
+    // =========================================
+    // DELETE NOTIFICATION
+    // =========================================
+    @DeleteMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public Map<String, String> deleteNotification(
+            @PathVariable Long id
+    ) {
+        notificationService.deleteNotification(id);
+        return Map.of(
+                "message",
+                "Notification deleted successfully"
+        );
+    }
 }

@@ -8,6 +8,8 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.premchemicals.cleaningbackend.repository.UserRepository;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -25,13 +27,16 @@ public class JwtUtil {
 
     private SecretKey key;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @PostConstruct
     public void init() {
         // Ensure proper encoding
         key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    // ✅ Generate Token (with role inside)
+    // ✅ Generate Token (with role and fullName inside)
     public String generateToken(UserDetails userDetails) {
 
         String role = userDetails.getAuthorities()
@@ -39,9 +44,14 @@ public class JwtUtil {
                 .next()
                 .getAuthority();
 
+        String fullName = userRepository.findByPhoneNumber(userDetails.getUsername())
+                .map(com.premchemicals.cleaningbackend.model.User::getFullName)
+                .orElse("User");
+
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
                 .claim("role", role)
+                .claim("fullName", fullName)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(key, SignatureAlgorithm.HS256)

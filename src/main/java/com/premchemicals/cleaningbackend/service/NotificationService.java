@@ -142,6 +142,20 @@ public User getTestUser() {
     }
 
     // =========================================
+    // DELETE NOTIFICATION
+    // =========================================
+    public void deleteNotification(Long notificationId) {
+        User user = userRepository.findByPhoneNumber(getLoggedInPhoneNumber())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        com.premchemicals.cleaningbackend.model.Notification notification =
+                notificationRepository.findByIdAndUser(notificationId, user)
+                        .orElseThrow(() -> new RuntimeException("Notification not found or unauthorized"));
+
+        notificationRepository.delete(notification);
+    }
+
+    // =========================================
     // UNREAD COUNT
     // =========================================
 
