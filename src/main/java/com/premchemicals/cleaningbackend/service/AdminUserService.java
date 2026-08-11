@@ -52,4 +52,14 @@ public class AdminUserService {
 
         userRepository.save(user);
     }
+
+    public UserResponseDTO toggleStatus(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
+
+        user.setActive(!user.isActive());
+        User savedUser = userRepository.save(user);
+        return userMapper.toDTO(savedUser);
+    }
 }

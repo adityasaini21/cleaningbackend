@@ -47,4 +47,15 @@ public class AdminController {
 
         return "Password reset successfully";
     }
+
+    // =========================================
+    // TOGGLE USER ACTIVE STATUS
+    // =========================================
+
+    @PutMapping("/{userId}/toggle-status")
+    public UserResponseDTO toggleStatus(
+            @PathVariable Long userId
+    ) {
+        return adminUserService.toggleStatus(userId);
+    }
 }

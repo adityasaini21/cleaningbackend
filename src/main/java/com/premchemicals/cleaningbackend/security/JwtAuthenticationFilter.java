@@ -1,5 +1,6 @@
 package com.premchemicals.cleaningbackend.security;
 
+import com.premchemicals.cleaningbackend.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +22,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(
@@ -54,26 +56,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     && role != null
                     && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                List<SimpleGrantedAuthority> authorities =
-                        Collections.singletonList(
-                                new SimpleGrantedAuthority(role)
+                userRepository.findByPhoneNumber(phoneNumber).ifPresent(user -> {
+                    if (user.isActive()) {
+                        List<SimpleGrantedAuthority> authorities =
+                                Collections.singletonList(
+                                        new SimpleGrantedAuthority(role)
+                                );
+
+                        UsernamePasswordAuthenticationToken authToken =
+                                new UsernamePasswordAuthenticationToken(
+                                        phoneNumber,
+                                        null,
+                                        authorities
+                                );
+
+                        authToken.setDetails(
+                                new WebAuthenticationDetailsSource()
+                                        .buildDetails(request)
                         );
 
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                phoneNumber,
-                                null,
-                                authorities
-                        );
-
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource()
-                                .buildDetails(request)
-                );
-
-                SecurityContextHolder
-                        .getContext()
-                        .setAuthentication(authToken);
+                        SecurityContextHolder
+                                .getContext()
+                                .setAuthentication(authToken);
+                    }
+                });
             }
 
         } catch (Exception e) {
