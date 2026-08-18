@@ -190,8 +190,24 @@ AND o.orderStatus = 'DELIVERED'
     // 1️⃣ Count orders between dates
     long countByOrderDateBetween(LocalDateTime start, LocalDateTime end);
 
+    @Query("""
+           SELECT COUNT(o)
+           FROM Order o
+           WHERE o.orderDate BETWEEN :start AND :end
+           AND (o.paymentMethod != 'ONLINE' OR o.paymentStatus = 'COMPLETED')
+           """)
+    long countConfirmedOrdersBetween(LocalDateTime start, LocalDateTime end);
+
     // 2️⃣ Count orders by status
     long countByOrderStatus(OrderStatus status);
+
+    @Query("""
+           SELECT COUNT(o)
+           FROM Order o
+           WHERE o.orderStatus = :status
+           AND (o.paymentMethod != 'ONLINE' OR o.paymentStatus = 'COMPLETED')
+           """)
+    long countConfirmedOrdersByOrderStatus(OrderStatus status);
 
     // 3️⃣ Count completed payments
     long countByPaymentStatus(PaymentStatus status);

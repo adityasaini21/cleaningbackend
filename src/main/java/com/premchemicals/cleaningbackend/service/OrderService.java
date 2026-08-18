@@ -136,34 +136,28 @@ public class OrderService {
 // CREATE NOTIFICATION
 // ========================================
 
-        notificationService.createNotification(
-                user,
-                "Order Placed",
-                "Your order #" + order.getId() +
-                        " has been placed successfully."
-        );
-
-        // ========================================
-// ADMIN NOTIFICATIONS
-// ========================================
-
-        List<User> admins =
-                userRepository.findAll()
-                        .stream()
-                        .filter(u -> u.getRole() == Role.ROLE_ADMIN)
-                        .toList();
-
-        for (User admin : admins) {
-
+        if (paymentMethod == PaymentMethod.COD) {
             notificationService.createNotification(
-
-                    admin,
-
-                    "New Order Received",
-
-                    "New order #" + order.getId() +
-                            " placed by " + user.getFullName()
+                    user,
+                    "Order Placed",
+                    "Your order #" + order.getId() +
+                            " has been placed successfully."
             );
+
+            List<User> admins =
+                    userRepository.findAll()
+                            .stream()
+                            .filter(u -> u.getRole() == Role.ROLE_ADMIN)
+                            .toList();
+
+            for (User admin : admins) {
+                notificationService.createNotification(
+                        admin,
+                        "New Order Received",
+                        "New order #" + order.getId() +
+                                " placed by " + user.getFullName()
+                );
+            }
         }
 
 // ========================================
@@ -196,6 +190,8 @@ public class OrderService {
 
         return orderRepository.findAll()
                 .stream()
+                .filter(order -> order.getPaymentMethod() != PaymentMethod.ONLINE
+                        || order.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -615,6 +611,8 @@ public class OrderService {
 
         return orderRepository.findByOrderStatus(status)
                 .stream()
+                .filter(order -> order.getPaymentMethod() != PaymentMethod.ONLINE
+                        || order.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -631,6 +629,8 @@ public class OrderService {
 
         return orderRepository.findByOrderDateBetween(start,end)
                 .stream()
+                .filter(order -> order.getPaymentMethod() != PaymentMethod.ONLINE
+                        || order.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -713,7 +713,7 @@ public class OrderService {
         // =========================================
 
         long todayOrders =
-                orderRepository.countByOrderDateBetween(
+                orderRepository.countConfirmedOrdersBetween(
                         startOfDay,
                         endOfDay
                 );
@@ -730,7 +730,7 @@ public class OrderService {
         // =========================================
 
         long weeklyOrders =
-                orderRepository.countByOrderDateBetween(
+                orderRepository.countConfirmedOrdersBetween(
                         startOfWeek,
                         endOfWeek
                 );
@@ -747,7 +747,7 @@ public class OrderService {
         // =========================================
 
         long monthlyOrders =
-                orderRepository.countByOrderDateBetween(
+                orderRepository.countConfirmedOrdersBetween(
                         startOfMonth,
                         endOfMonth
                 );
