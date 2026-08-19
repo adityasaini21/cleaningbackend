@@ -27,13 +27,16 @@ public class NotificationService {
     // GET TEST USER
     // =========================================
 
-    public User getTestUser() {
-
-        return userRepository
-                .findByUsername("admin")
-                .orElseThrow(() ->
-                        new RuntimeException("Admin user not found"));
-    }
+//    public User getTestUser() {
+//
+//        return userRepository
+//                .findByPhoneNumber("9795611275")
+//                .orElseThrow(() ->
+//                        new RuntimeException("Admin user not found"));
+//    }
+public User getTestUser() {
+    throw new UnsupportedOperationException("Not used");
+}
 
     // =========================================
     // CREATE + SEND NOTIFICATION
@@ -109,7 +112,7 @@ public class NotificationService {
     getMyNotifications() {
 
         User user = userRepository
-                .findByUsername(getLoggedInUsername())
+                .findByPhoneNumber(getLoggedInPhoneNumber())
                 .orElseThrow(() ->
                         new RuntimeException("User not found"));
 
@@ -139,13 +142,27 @@ public class NotificationService {
     }
 
     // =========================================
+    // DELETE NOTIFICATION
+    // =========================================
+    public void deleteNotification(Long notificationId) {
+        User user = userRepository.findByPhoneNumber(getLoggedInPhoneNumber())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        com.premchemicals.cleaningbackend.model.Notification notification =
+                notificationRepository.findByIdAndUser(notificationId, user)
+                        .orElseThrow(() -> new RuntimeException("Notification not found or unauthorized"));
+
+        notificationRepository.delete(notification);
+    }
+
+    // =========================================
     // UNREAD COUNT
     // =========================================
 
     public long getUnreadCount() {
 
         User user = userRepository
-                .findByUsername(getLoggedInUsername())
+                .findByPhoneNumber(getLoggedInPhoneNumber())
                 .orElseThrow(() ->
                         new RuntimeException("User not found"));
 
@@ -177,7 +194,7 @@ public class NotificationService {
     // HELPER
     // =========================================
 
-    private String getLoggedInUsername() {
+    private String getLoggedInPhoneNumber() {
 
         return SecurityContextHolder
                 .getContext()

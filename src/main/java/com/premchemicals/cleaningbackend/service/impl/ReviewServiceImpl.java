@@ -59,7 +59,7 @@ public class ReviewServiceImpl
 
         User user =
                 userRepository
-                        .findByUsername(username)
+                        .findByPhoneNumber(username)
                         .orElseThrow();
 
         Product product =
@@ -108,7 +108,7 @@ public class ReviewServiceImpl
         return ReviewResponseDTO
                 .builder()
                 .id(saved.getId())
-                .username(user.getUsername())
+                .username(user.getPhoneNumber())
                 .rating(saved.getRating())
                 .comment(saved.getComment())
                 .createdAt(saved.getCreatedAt())
@@ -185,7 +185,7 @@ public class ReviewServiceImpl
 
                                 currentUser = userRepository
 
-                                        .findByUsername(authentication.getName())
+                                        .findByPhoneNumber(authentication.getName())
 
                                         .orElse(null);
 
@@ -219,7 +219,7 @@ public class ReviewServiceImpl
 
                                     .id(review.getId())
 
-                                    .username(review.getUser().getUsername())
+                                    .username(review.getUser().getPhoneNumber())
 
                                     .rating(review.getRating())
 
@@ -273,7 +273,7 @@ public class ReviewServiceImpl
 
         User user =
                 userRepository
-                        .findByUsername(username)
+                        .findByPhoneNumber(username)
                         .orElseThrow();
 
         Product product =
@@ -302,7 +302,7 @@ public class ReviewServiceImpl
 
         User user =
                 userRepository
-                        .findByUsername(username)
+                        .findByPhoneNumber(username)
                         .orElseThrow();
 
         Review review =

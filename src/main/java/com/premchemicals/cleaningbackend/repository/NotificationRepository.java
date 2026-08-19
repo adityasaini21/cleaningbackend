@@ -16,6 +16,8 @@ public interface NotificationRepository
     List<Notification>
     findByUserOrderByCreatedAtDesc(User user);
 
+    java.util.Optional<Notification> findByIdAndUser(Long id, User user);
+
     // =========================================
     // UNREAD COUNT
     // =========================================

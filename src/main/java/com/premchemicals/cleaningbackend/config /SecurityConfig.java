@@ -83,9 +83,9 @@ public class SecurityConfig {
                         // FCM TOKEN API
                         // =====================================
 
-                        .requestMatchers(
-                                "/api/users/save-fcm-token"
-                        ).authenticated()
+                                .requestMatchers(
+                                        "/auth/save-fcm-token"
+                                ).authenticated()
 
                         // =====================================
                         // UPLOADS
@@ -96,18 +96,18 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // =====================================
-                        // PUBLIC PRODUCT APIs
+                        // PRODUCT APIs (AUTHENTICATED)
                         // =====================================
 
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/products/**"
-                        ).permitAll()
+                        ).authenticated()
 
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/categories/**"
-                        ).permitAll()
+                        ).authenticated()
 
                         // =====================================
                         // PINCODE
@@ -139,6 +139,10 @@ public class SecurityConfig {
                         // =====================================
 
                         .requestMatchers(
+                                "/api/payments/phonepe/callback/**"
+                        ).permitAll()
+
+                        .requestMatchers(
                                 "/api/payments/**"
                         ).authenticated()
 
@@ -149,6 +153,14 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/webhooks/**"
                         ).permitAll()
+
+                                // =====================================
+// ADMIN APIs
+// =====================================
+
+                                .requestMatchers(
+                                        "/admin/**"
+                                ).hasRole("ADMIN")
 
                         // =====================================
                         // EVERYTHING ELSE
@@ -173,11 +185,8 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
-        configuration.setAllowedOrigins(
-
-                List.of(
-                        "http://localhost:5173"
-                )
+        configuration.setAllowedOriginPatterns(
+                List.of("*")
         );
 
         configuration.setAllowedMethods(

@@ -38,10 +38,12 @@ public class OrderService {
     @Transactional
     public OrderResponseDTO placeOrder(OrderRequestDTO request) {
 
-        String username = getLoggedInUsername();
+        String phoneNumber = getLoggedInPhoneNumber();
 
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository
+                .findByPhoneNumber(phoneNumber)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
 
         Order order = new Order();
 
@@ -134,34 +136,28 @@ public class OrderService {
 // CREATE NOTIFICATION
 // ========================================
 
-        notificationService.createNotification(
-                user,
-                "Order Placed",
-                "Your order #" + order.getId() +
-                        " has been placed successfully."
-        );
-
-        // ========================================
-// ADMIN NOTIFICATIONS
-// ========================================
-
-        List<User> admins =
-                userRepository.findAll()
-                        .stream()
-                        .filter(u -> u.getRole().equals("ROLE_ADMIN"))
-                        .toList();
-
-        for (User admin : admins) {
-
+        if (paymentMethod == PaymentMethod.COD) {
             notificationService.createNotification(
-
-                    admin,
-
-                    "New Order Received",
-
-                    "New order #" + order.getId() +
-                            " placed by " + user.getUsername()
+                    user,
+                    "Order Placed",
+                    "Your order #" + order.getId() +
+                            " has been placed successfully."
             );
+
+            List<User> admins =
+                    userRepository.findAll()
+                            .stream()
+                            .filter(u -> u.getRole() == Role.ROLE_ADMIN)
+                            .toList();
+
+            for (User admin : admins) {
+                notificationService.createNotification(
+                        admin,
+                        "New Order Received",
+                        "New order #" + order.getId() +
+                                " placed by " + user.getFullName()
+                );
+            }
         }
 
 // ========================================
@@ -177,7 +173,7 @@ public class OrderService {
 
     public List<OrderResponseDTO> getMyOrders() {
 
-        User user = userRepository.findByUsername(getLoggedInUsername())
+        User user = userRepository.findByPhoneNumber(getLoggedInPhoneNumber())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return orderRepository.findByUser(user)
@@ -194,6 +190,8 @@ public class OrderService {
 
         return orderRepository.findAll()
                 .stream()
+                .filter(order -> order.getPaymentMethod() != PaymentMethod.ONLINE
+                        || order.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -486,7 +484,8 @@ public class OrderService {
     // PRIVATE HELPERS
     // =========================================================
 
-    private String getLoggedInUsername() {
+    private String getLoggedInPhoneNumber() {
+
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
@@ -612,6 +611,8 @@ public class OrderService {
 
         return orderRepository.findByOrderStatus(status)
                 .stream()
+                .filter(order -> order.getPaymentMethod() != PaymentMethod.ONLINE
+                        || order.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -628,6 +629,8 @@ public class OrderService {
 
         return orderRepository.findByOrderDateBetween(start,end)
                 .stream()
+                .filter(order -> order.getPaymentMethod() != PaymentMethod.ONLINE
+                        || order.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -710,7 +713,7 @@ public class OrderService {
         // =========================================
 
         long todayOrders =
-                orderRepository.countByOrderDateBetween(
+                orderRepository.countConfirmedOrdersBetween(
                         startOfDay,
                         endOfDay
                 );
@@ -727,7 +730,7 @@ public class OrderService {
         // =========================================
 
         long weeklyOrders =
-                orderRepository.countByOrderDateBetween(
+                orderRepository.countConfirmedOrdersBetween(
                         startOfWeek,
                         endOfWeek
                 );
@@ -744,7 +747,7 @@ public class OrderService {
         // =========================================
 
         long monthlyOrders =
-                orderRepository.countByOrderDateBetween(
+                orderRepository.countConfirmedOrdersBetween(
                         startOfMonth,
                         endOfMonth
                 );
