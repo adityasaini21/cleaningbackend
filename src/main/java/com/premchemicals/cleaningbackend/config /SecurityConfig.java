@@ -77,6 +77,8 @@ public class SecurityConfig {
 
                                 "/auth/google/**",
 
+                                "/auth/otp/**",
+
                                 "/api/notifications/test"
 
                         ).permitAll()
