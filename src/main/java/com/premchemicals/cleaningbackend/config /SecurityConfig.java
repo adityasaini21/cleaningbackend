@@ -75,6 +75,8 @@ public class SecurityConfig {
 
                                 "/auth/register",
 
+                                "/auth/google/**",
+
                                 "/api/notifications/test"
 
                         ).permitAll()

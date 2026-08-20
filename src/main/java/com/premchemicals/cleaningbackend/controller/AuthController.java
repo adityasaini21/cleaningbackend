@@ -20,6 +20,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.springframework.web.bind.annotation.*;
+import com.premchemicals.cleaningbackend.dto.GoogleLoginRequestDTO;
+import com.premchemicals.cleaningbackend.dto.GoogleRegisterRequestDTO;
+import com.premchemicals.cleaningbackend.dto.GoogleLoginResponseDTO;
+import com.premchemicals.cleaningbackend.service.GoogleAuthService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/auth")
@@ -33,6 +38,8 @@ public class AuthController {
     private final UserRepository userRepository;
 
     private final PasswordEncoder passwordEncoder;
+
+    private final GoogleAuthService googleAuthService;
 
     // =========================================
     // REGISTER CUSTOMER
@@ -137,6 +144,22 @@ public class AuthController {
                 jwtUtil.generateToken(userDetails);
 
         return new LoginResponseDTO(token);
+    }
+
+    // =========================================
+    // GOOGLE SIGN-IN LOGIN
+    // =========================================
+    @PostMapping("/google/login")
+    public GoogleLoginResponseDTO loginWithGoogle(@Valid @RequestBody GoogleLoginRequestDTO request) {
+        return googleAuthService.loginWithGoogle(request.getIdToken());
+    }
+
+    // =========================================
+    // GOOGLE SIGN-IN REGISTER
+    // =========================================
+    @PostMapping("/google/register")
+    public GoogleLoginResponseDTO registerWithGoogle(@Valid @RequestBody GoogleRegisterRequestDTO request) {
+        return googleAuthService.registerWithGoogle(request.getIdToken(), request.getPhoneNumber());
     }
 
     // =========================================
