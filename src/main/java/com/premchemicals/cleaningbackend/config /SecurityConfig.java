@@ -79,6 +79,8 @@ public class SecurityConfig {
 
                                 "/auth/otp/**",
 
+                                "/auth/check-phone",
+
                                 "/api/notifications/test"
 
                         ).permitAll()

@@ -19,10 +19,16 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.access.prepost.PreAuthorize;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.premchemicals.cleaningbackend.dto.GoogleLoginRequestDTO;
 import com.premchemicals.cleaningbackend.dto.GoogleRegisterRequestDTO;
 import com.premchemicals.cleaningbackend.dto.GoogleLoginResponseDTO;
+import com.premchemicals.cleaningbackend.dto.OtpLoginRequestDTO;
+import com.premchemicals.cleaningbackend.dto.OtpLoginResponseDTO;
+import com.premchemicals.cleaningbackend.service.OtpService;
+import java.util.UUID;
+import java.util.Map;
 import com.premchemicals.cleaningbackend.service.GoogleAuthService;
 import jakarta.validation.Valid;
 
@@ -40,6 +46,8 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
 
     private final GoogleAuthService googleAuthService;
+
+    private final OtpService otpService;
 
     // =========================================
     // REGISTER CUSTOMER
@@ -160,6 +168,65 @@ public class AuthController {
     @PostMapping("/google/register")
     public GoogleLoginResponseDTO registerWithGoogle(@Valid @RequestBody GoogleRegisterRequestDTO request) {
         return googleAuthService.registerWithGoogle(request.getIdToken(), request.getPhoneNumber());
+    }
+
+    // =========================================
+    // OTP PASSWORDLESS LOGIN & REGISTER
+    // =========================================
+    @PostMapping("/otp/login")
+    public ResponseEntity<?> loginOrRegisterWithOtp(@Valid @RequestBody OtpLoginRequestDTO request) {
+        String phone = request.getPhoneNumber().trim();
+        String otp = request.getOtp().trim();
+
+        // 1. Verify OTP first
+        boolean isOtpValid = otpService.verifyOtp(phone, otp);
+        if (!isOtpValid) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid or expired OTP"));
+        }
+
+        // 2. Check if user exists by phone
+        User user = userRepository.findByPhoneNumber(phone).orElse(null);
+        boolean isNewUser = false;
+
+        if (user == null) {
+            // User does not exist, so register them!
+            String name = request.getFullName();
+            if (name == null || name.trim().isEmpty()) {
+                name = "Customer"; // Fallback name
+            } else {
+                name = name.trim();
+            }
+
+            user = User.builder()
+                    .phoneNumber(phone)
+                    .fullName(name)
+                    .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .role(Role.ROLE_USER)
+                    .active(true)
+                    .build();
+
+            userRepository.save(user);
+            isNewUser = true;
+        }
+
+        // 3. Generate JWT Token
+        UserDetails userDetails = org.springframework.security.core.userdetails.User.withUsername(user.getPhoneNumber())
+                .password(user.getPassword())
+                .authorities(user.getRole().name())
+                .build();
+
+        String token = jwtUtil.generateToken(userDetails);
+
+        return ResponseEntity.ok(new OtpLoginResponseDTO(token, isNewUser, user.getFullName()));
+    }
+
+    // =========================================
+    // CHECK IF PHONE NUMBER EXISTS
+    // =========================================
+    @GetMapping("/check-phone")
+    public ResponseEntity<?> checkPhoneExists(@RequestParam String phoneNumber) {
+        boolean exists = userRepository.existsByPhoneNumber(phoneNumber.trim());
+        return ResponseEntity.ok(Map.of("exists", exists));
     }
 
     // =========================================
