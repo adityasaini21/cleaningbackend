@@ -558,7 +558,7 @@ public class OrderService {
         );
 
         dto.setTotalAmount(order.getTotalAmount());
-        dto.setDeliveryCharge(order.getDeliveryCharge());
+        dto.setDeliveryCharge(order.getDeliveryCharge() != null ? order.getDeliveryCharge() : 0.0);
 
         dto.setOrderStatus(order.getOrderStatus());
 

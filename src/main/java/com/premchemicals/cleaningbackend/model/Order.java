@@ -56,7 +56,7 @@ public class Order {
     private String pincode;
 
     @Builder.Default
-    @Column(nullable = false)
+    @Column
     private Double deliveryCharge = 0.0;
 
     @Column
