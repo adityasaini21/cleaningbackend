@@ -31,6 +31,7 @@ public class OrderService {
             deliveryPincodeRepository;
     private final NotificationService notificationService;
     private final GoogleMapsService googleMapsService;
+    private final DeliveryPincodeService deliveryPincodeService;
 
     // =========================================================
     // CREATE ORDER
@@ -66,21 +67,14 @@ public class OrderService {
 // PINCODE VALIDATION
 // ========================================
 
-        DeliveryPincode deliveryPincode =
-                deliveryPincodeRepository
-                        .findByPincodeAndActiveTrue(
-                                request.getPincode()
-                        )
-                        .orElseThrow(() ->
-                                new ResponseStatusException(
-                                        HttpStatus.BAD_REQUEST,
-                                        "Delivery not available for this pincode"
-                                )
-                        );
+        if (!deliveryPincodeService.isDeliverable(request.getPincode())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Delivery not available for this pincode"
+            );
+        }
 
-        order.setPincode(
-                deliveryPincode.getPincode()
-        );
+        order.setPincode(request.getPincode().trim());
 
 // ========================================
 
