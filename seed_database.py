@@ -1,7 +1,7 @@
 import psycopg2
 
 def main():
-    db_uri = "postgres://neondb_owner:npg_jLHFwzIR4q0W@ep-aged-truth-aow79yjg.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+    db_uri = "postgresql://postgres:MMzRgecikLosRHvdZwWOqFyGJlQIweKv@yamanote.proxy.rlwy.net:29040/railway"
     conn = psycopg2.connect(db_uri)
     cur = conn.cursor()
     
@@ -126,7 +126,25 @@ def main():
         print(f"Inserted Product: '{name}' in Category: '{cat_name}'")
         
     conn.commit()
-    print("\nReseed successful! All categories and products have been updated.")
+
+    # 3. Pincodes List
+    pincodes_data = [
+        ('208006', 'Govind Nagar', True),
+        ('208022', 'Ratan Lal Nagar', True),
+        ('209871', 'Dabouli', True)
+    ]
+    
+    print("\nInserting delivery pincodes...")
+    for pin, area, active in pincodes_data:
+        cur.execute("""
+            INSERT INTO delivery_pincodes (pincode, area_name, active) 
+            VALUES (%s, %s, %s)
+            ON CONFLICT DO NOTHING;
+        """, (pin, area, active))
+        print(f"Inserted Pincode: {pin} | Area: {area}")
+        
+    conn.commit()
+    print("\nReseed successful! All categories, products, and pincodes have been updated.")
     
     cur.close()
     conn.close()
