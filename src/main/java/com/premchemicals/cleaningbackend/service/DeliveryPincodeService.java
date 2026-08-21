@@ -14,8 +14,8 @@ public class DeliveryPincodeService {
         if (pincode == null) return false;
         String cleanPincode = pincode.trim();
         
-        // Dynamically allow all Kanpur Nagar (208xxx) and Kanpur Dehat (209xxx) postal zones
-        if (cleanPincode.startsWith("208") || cleanPincode.startsWith("209")) {
+        // Dynamically allow all Kanpur Nagar (208xxx) postal zones
+        if (cleanPincode.startsWith("208")) {
             return true;
         }
 
