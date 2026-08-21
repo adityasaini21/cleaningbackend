@@ -4,9 +4,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -88,5 +90,48 @@ public class GoogleMapsService {
                 * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c * 1000; // Return in meters
+    }
+
+    /**
+     * Converts a text address/pincode into coordinates {latitude, longitude} using Google Geocoding API.
+     * Returns null if it fails.
+     */
+    public double[] getCoordinatesFromAddress(String address, String pincode) {
+        if (apiKey == null || apiKey.isBlank()) {
+            System.out.println("⚠️ Google Maps API Key is missing. Cannot perform geocoding.");
+            return null;
+        }
+
+        try {
+            String fullQuery = (address != null ? address : "") + " " + (pincode != null ? pincode : "") + ", Kanpur, Uttar Pradesh, India";
+            String encodedQuery = URLEncoder.encode(fullQuery, StandardCharsets.UTF_8);
+            
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://maps.googleapis.com/maps/api/geocode/json?address=" + encodedQuery + "&key=" + apiKey.trim()))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                String body = response.body();
+                Pattern latPattern = Pattern.compile("\"lat\"\\s*:\\s*(-?\\d+\\.?\\d*)");
+                Pattern lngPattern = Pattern.compile("\"lng\"\\s*:\\s*(-?\\d+\\.?\\d*)");
+                
+                Matcher latMatcher = latPattern.matcher(body);
+                Matcher lngMatcher = lngPattern.matcher(body);
+                
+                if (latMatcher.find() && lngMatcher.find()) {
+                    double lat = Double.parseDouble(latMatcher.group(1));
+                    double lng = Double.parseDouble(lngMatcher.group(1));
+                    return new double[]{lat, lng};
+                }
+            } else {
+                System.out.println("⚠️ Google Geocoding API returned status: " + response.statusCode());
+            }
+        } catch (Exception e) {
+            System.out.println("⚠️ Error during Google Geocoding: " + e.getMessage());
+        }
+        return null;
     }
 }

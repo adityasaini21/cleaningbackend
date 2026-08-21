@@ -124,15 +124,22 @@ public class OrderService {
 
         // 🚗 CALCULATE DELIVERY CHARGE BY ROAD DISTANCE
         double deliveryCharge = 30.0;
-        if (request.getLatitude() != null && request.getLongitude() != null) {
-            double distanceInMeters = googleMapsService.getRoadDistanceInMeters(
-                    request.getLatitude(),
-                    request.getLongitude()
-            );
-            System.out.println("🚗 Calculated road distance for order: " + distanceInMeters + " meters.");
-            if (distanceInMeters > 5000.0) {
-                deliveryCharge = 50.0;
-            }
+        double lat = 26.4764; // Default store lat
+        double lng = 80.3124; // Default store lng
+
+        double[] coords = googleMapsService.getCoordinatesFromAddress(
+                request.getShippingAddress(),
+                request.getPincode()
+        );
+        if (coords != null) {
+            lat = coords[0];
+            lng = coords[1];
+        }
+
+        double distanceInMeters = googleMapsService.getRoadDistanceInMeters(lat, lng);
+        System.out.println("🚗 Calculated road distance for order: " + distanceInMeters + " meters.");
+        if (distanceInMeters > 5000.0) {
+            deliveryCharge = 50.0;
         }
 
         order.setDeliveryCharge(deliveryCharge);
@@ -181,8 +188,17 @@ public class OrderService {
         return mapToResponse(order);
     }
 
-    public Map<String, Object> getDeliveryChargeAndDistance(double latitude, double longitude) {
-        double distanceInMeters = googleMapsService.getRoadDistanceInMeters(latitude, longitude);
+    public Map<String, Object> getDeliveryChargeAndDistance(String address, String pincode) {
+        double lat = 26.4764; // Default store coordinates as fallback origin
+        double lng = 80.3124;
+
+        double[] coords = googleMapsService.getCoordinatesFromAddress(address, pincode);
+        if (coords != null) {
+            lat = coords[0];
+            lng = coords[1];
+        }
+
+        double distanceInMeters = googleMapsService.getRoadDistanceInMeters(lat, lng);
         double deliveryCharge = 30.0;
         if (distanceInMeters > 5000.0) {
             deliveryCharge = 50.0;
