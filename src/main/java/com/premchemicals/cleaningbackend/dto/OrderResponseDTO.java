@@ -17,6 +17,7 @@ public class OrderResponseDTO {
     private String pincode;
 
     private Double totalAmount;
+    private Double deliveryCharge;
 
     private OrderStatus orderStatus;
     private PaymentStatus paymentStatus;

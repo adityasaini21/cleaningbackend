@@ -55,6 +55,10 @@ public class Order {
     @Column(nullable = false)
     private String pincode;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Double deliveryCharge = 0.0;
+
     @Column
     private String deliveryBoyName;
 

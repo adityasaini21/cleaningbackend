@@ -30,6 +30,15 @@ public class OrderController {
     // PLACE ORDER
     // =====================================================
 
+    @GetMapping("/delivery-charge")
+    @PreAuthorize("isAuthenticated()")
+    public java.util.Map<String, Object> getDeliveryCharge(
+            @RequestParam Double latitude,
+            @RequestParam Double longitude
+    ) {
+        return orderService.getDeliveryChargeAndDistance(latitude, longitude);
+    }
+
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public OrderResponseDTO placeOrder(

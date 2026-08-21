@@ -30,6 +30,7 @@ public class OrderService {
     private final DeliveryPincodeRepository
             deliveryPincodeRepository;
     private final NotificationService notificationService;
+    private final GoogleMapsService googleMapsService;
 
     // =========================================================
     // CREATE ORDER
@@ -120,7 +121,22 @@ public class OrderService {
         }
 
         order.setOrderItems(orderItems);
-        order.setTotalAmount(totalAmount);
+
+        // 🚗 CALCULATE DELIVERY CHARGE BY ROAD DISTANCE
+        double deliveryCharge = 30.0;
+        if (request.getLatitude() != null && request.getLongitude() != null) {
+            double distanceInMeters = googleMapsService.getRoadDistanceInMeters(
+                    request.getLatitude(),
+                    request.getLongitude()
+            );
+            System.out.println("🚗 Calculated road distance for order: " + distanceInMeters + " meters.");
+            if (distanceInMeters > 5000.0) {
+                deliveryCharge = 50.0;
+            }
+        }
+
+        order.setDeliveryCharge(deliveryCharge);
+        order.setTotalAmount(totalAmount + deliveryCharge);
 
         if (paymentMethod == PaymentMethod.ONLINE) {
             order.setOrderStatus(OrderStatus.CREATED);
@@ -165,7 +181,17 @@ public class OrderService {
         return mapToResponse(order);
     }
 
-
+    public Map<String, Object> getDeliveryChargeAndDistance(double latitude, double longitude) {
+        double distanceInMeters = googleMapsService.getRoadDistanceInMeters(latitude, longitude);
+        double deliveryCharge = 30.0;
+        if (distanceInMeters > 5000.0) {
+            deliveryCharge = 50.0;
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("distanceMeters", distanceInMeters);
+        result.put("deliveryCharge", deliveryCharge);
+        return result;
+    }
 
     // =========================================================
     // GET MY ORDERS
@@ -509,6 +535,7 @@ public class OrderService {
         );
 
         dto.setTotalAmount(order.getTotalAmount());
+        dto.setDeliveryCharge(order.getDeliveryCharge());
 
         dto.setOrderStatus(order.getOrderStatus());
 

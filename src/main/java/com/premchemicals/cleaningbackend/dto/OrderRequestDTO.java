@@ -23,6 +23,9 @@ public class OrderRequestDTO {
     @NotBlank  // ✅ NEW FIELD (MANDATORY)
     private String paymentMethod;  // "ONLINE" or "COD"
 
+    private Double latitude;
+    private Double longitude;
+
 
 
     @NotEmpty
