@@ -120,6 +120,13 @@ public class OrderService {
             }
         }
 
+        if (totalAmount < 200.0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Minimum order amount is ₹200.00"
+            );
+        }
+
         order.setOrderItems(orderItems);
 
         // 🚗 CALCULATE DELIVERY CHARGE BY ROAD DISTANCE
