@@ -81,7 +81,9 @@ public class SecurityConfig {
 
                                 "/auth/check-phone",
 
-                                "/api/notifications/test"
+                                "/api/notifications/test",
+
+                                "/api/service-status"
 
                         ).permitAll()
 
