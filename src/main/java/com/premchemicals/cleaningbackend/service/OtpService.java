@@ -17,11 +17,15 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class OtpService {
 
-    @Value("${payment.dev-mode:true}")
-    private boolean devMode;
-
     @Value("${minimoth.api-key:}")
     private String minimothApiKey;
+
+    private boolean isMockMode() {
+        return minimothApiKey == null || 
+               minimothApiKey.isBlank() || 
+               "test".equalsIgnoreCase(minimothApiKey.trim()) || 
+               "dummy".equalsIgnoreCase(minimothApiKey.trim());
+    }
 
     // Cache to store OTP codes in memory ONLY for dev-mode testing
     private final Map<String, OtpDetails> otpCache = new ConcurrentHashMap<>();
@@ -65,13 +69,13 @@ public class OtpService {
     public void sendOtp(String phoneNumber) {
         String cleanPhone = normalizePhone(phoneNumber);
 
-        if (devMode) {
+        if (isMockMode()) {
             String otp = String.format("%06d", new Random().nextInt(999999));
             // Save OTP to in-memory cache with 5-minute validity for dev-mode verification
             otpCache.put(cleanPhone, new OtpDetails(otp, 5));
 
             System.out.println("==========================================");
-            System.out.println("🔥 [DEV MODE] Simulated OTP sent to " + cleanPhone + " is: " + otp);
+            System.out.println("🔥 [MOCK OTP MODE] Simulated OTP sent to " + cleanPhone + " is: " + otp);
             System.out.println("==========================================");
             return;
         }
@@ -114,7 +118,7 @@ public class OtpService {
     public boolean verifyOtp(String phoneNumber, String otp) {
         String cleanPhone = normalizePhone(phoneNumber);
 
-        if (devMode) {
+        if (isMockMode()) {
             OtpDetails details = otpCache.get(cleanPhone);
             if (details == null) {
                 return false;
