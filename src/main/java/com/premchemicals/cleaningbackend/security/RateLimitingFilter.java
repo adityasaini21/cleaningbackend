@@ -27,14 +27,14 @@ public class RateLimitingFilter implements Filter {
         String ip = getClientIP(httpRequest);
 
         if (path.startsWith("/auth/login") || path.startsWith("/auth/register") || path.startsWith("/auth/otp")) {
-            if (isRateLimited(ip, loginAttempts, 5, 60000)) { // 5 attempts per minute
+            if (isRateLimited(ip, loginAttempts, 10, 60000)) { // 10 attempts per minute
                 httpResponse.setStatus(429); // Too Many Requests
                 httpResponse.setContentType("application/json");
                 httpResponse.getWriter().write("{\"error\": \"Too many login attempts. Please try again in a minute.\"}");
                 return;
             }
         } else if (path.startsWith("/auth/change-password") || path.startsWith("/auth/delete-account")) {
-            if (isRateLimited(ip, passwordResetAttempts, 3, 3600000)) { // 3 attempts per hour
+            if (isRateLimited(ip, passwordResetAttempts, 5, 3600000)) { // 5 attempts per hour
                 httpResponse.setStatus(429);
                 httpResponse.setContentType("application/json");
                 httpResponse.getWriter().write("{\"error\": \"Too many password actions. Please try again in an hour.\"}");
