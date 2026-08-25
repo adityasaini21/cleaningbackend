@@ -21,10 +21,7 @@ public class OtpService {
     private String minimothApiKey;
 
     private boolean isMockMode() {
-        return minimothApiKey == null || 
-               minimothApiKey.isBlank() || 
-               "test".equalsIgnoreCase(minimothApiKey.trim()) || 
-               "dummy".equalsIgnoreCase(minimothApiKey.trim());
+        return minimothApiKey == null || minimothApiKey.isBlank();
     }
 
     // Cache to store OTP codes in memory ONLY for dev-mode testing
