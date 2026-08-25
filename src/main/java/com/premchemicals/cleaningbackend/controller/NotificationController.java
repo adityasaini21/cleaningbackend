@@ -50,30 +50,7 @@ public class NotificationController {
         );
     }
 
-    // =========================================
-    // TEST PUSH NOTIFICATION
-    // =========================================
 
-    @GetMapping("/test")
-    public Map<String, String> testNotification() {
-
-        User user =
-                notificationService.getTestUser();
-
-        notificationService.createNotification(
-
-                user,
-
-                "Backend Notification",
-
-                "Push notification from Spring Boot 🚀"
-        );
-
-        return Map.of(
-                "message",
-                "Notification sent"
-        );
-    }
 
     // =========================================
     // UNREAD COUNT

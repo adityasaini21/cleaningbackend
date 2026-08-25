@@ -24,12 +24,28 @@ public class GlobalExceptionHandler {
             RuntimeException ex,
             HttpServletRequest request) {
 
+        String correlationId = java.util.UUID.randomUUID().toString();
+        System.err.println("[Correlation ID: " + correlationId + "] RuntimeException: " + ex.getMessage());
+        ex.printStackTrace();
+
+        String clientMessage = ex.getMessage();
+        if (clientMessage == null || 
+            clientMessage.toLowerCase().contains("sql") ||
+            clientMessage.toLowerCase().contains("postgres") ||
+            clientMessage.toLowerCase().contains("jdbc") ||
+            clientMessage.toLowerCase().contains("hibernate") ||
+            clientMessage.toLowerCase().contains("database") ||
+            clientMessage.toLowerCase().contains("connection")) {
+            clientMessage = "An internal database error occurred. Reference correlation ID for details.";
+        }
+
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.name(),
-                ex.getMessage(),
-                request.getRequestURI()
+                clientMessage,
+                request.getRequestURI(),
+                correlationId
         );
 
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
@@ -107,12 +123,17 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request) {
 
+        String correlationId = java.util.UUID.randomUUID().toString();
+        System.err.println("[Correlation ID: " + correlationId + "] GlobalException: " + ex.getMessage());
+        ex.printStackTrace();
+
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 HttpStatus.INTERNAL_SERVER_ERROR.name(),
                 "Something went wrong. Please contact support.",
-                request.getRequestURI()
+                request.getRequestURI(),
+                correlationId
         );
 
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);

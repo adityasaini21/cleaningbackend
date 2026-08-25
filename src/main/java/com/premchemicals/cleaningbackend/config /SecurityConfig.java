@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 import org.springframework.http.HttpMethod;
 
@@ -32,14 +33,19 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+import com.premchemicals.cleaningbackend.security.RateLimitingFilter;
+
 @Configuration
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
-
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitingFilter rateLimitingFilter;
+
+    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -47,10 +53,12 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
-
                 .cors(cors -> {})
-
                 .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.deny())
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'"))
+                )
 
                 .sessionManagement(session ->
 
@@ -80,8 +88,6 @@ public class SecurityConfig {
                                 "/auth/otp/**",
 
                                 "/auth/check-phone",
-
-                                "/api/notifications/test",
 
                                 "/api/service-status"
 
@@ -178,9 +184,11 @@ public class SecurityConfig {
                 )
 
                 .addFilterBefore(
-
+                        rateLimitingFilter,
+                        JwtAuthenticationFilter.class
+                )
+                .addFilterBefore(
                         jwtAuthenticationFilter,
-
                         UsernamePasswordAuthenticationFilter.class
                 );
 
@@ -193,9 +201,7 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(
-                List.of("*")
-        );
+        configuration.setAllowedOrigins(allowedOrigins);
 
         configuration.setAllowedMethods(
 

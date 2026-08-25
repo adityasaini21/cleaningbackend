@@ -17,6 +17,7 @@ public class ErrorResponse {
     private String error;
     private String message;
     private String path;
+    private String correlationId;
 
     private Map<String, String> errors; // optional (for validation)
 
@@ -30,5 +31,33 @@ public class ErrorResponse {
         this.error = error;
         this.message = message;
         this.path = path;
+    }
+
+    public ErrorResponse(LocalDateTime timestamp,
+                         int status,
+                         String error,
+                         String message,
+                         String path,
+                         String correlationId) {
+        this.timestamp = timestamp;
+        this.status = status;
+        this.error = error;
+        this.message = message;
+        this.path = path;
+        this.correlationId = correlationId;
+    }
+
+    public ErrorResponse(LocalDateTime timestamp,
+                         int status,
+                         String error,
+                         String message,
+                         String path,
+                         Map<String, String> errors) {
+        this.timestamp = timestamp;
+        this.status = status;
+        this.error = error;
+        this.message = message;
+        this.path = path;
+        this.errors = errors;
     }
 }
