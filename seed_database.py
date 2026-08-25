@@ -1,7 +1,13 @@
+import os
 import psycopg2
 
 def main():
-    db_uri = "postgresql://postgres:MMzRgecikLosRHvdZwWOqFyGJlQIweKv@yamanote.proxy.rlwy.net:29040/railway"
+    # Use environment variable to avoid exposing credentials in git
+    db_uri = os.getenv("SPRING_DATASOURCE_URL") or os.getenv("DATABASE_URL")
+    if not db_uri:
+        db_uri = "postgresql://postgres:postgres@localhost:5432/cleaningdb"
+        print(f"Warning: No database environment variable found. Falling back to default local: {db_uri}")
+    
     conn = psycopg2.connect(db_uri)
     cur = conn.cursor()
     
