@@ -1,6 +1,5 @@
 package com.premchemicals.cleaningbackend.controller;
 
-import com.premchemicals.cleaningbackend.dto.ResetPasswordRequestDTO;
 import com.premchemicals.cleaningbackend.dto.UserResponseDTO;
 import com.premchemicals.cleaningbackend.service.AdminUserService;
 import lombok.RequiredArgsConstructor;
@@ -28,25 +27,7 @@ public class AdminController {
         return adminUserService.searchUsers(query);
     }
 
-    // =========================================
-    // RESET USER PASSWORD
-    // =========================================
 
-    @PutMapping("/{userId}/reset-password")
-    public String resetPassword(
-
-            @PathVariable Long userId,
-
-            @RequestBody ResetPasswordRequestDTO request
-    ) {
-
-        adminUserService.resetPassword(
-                userId,
-                request
-        );
-
-        return "Password reset successfully";
-    }
 
     // =========================================
     // TOGGLE USER ACTIVE STATUS

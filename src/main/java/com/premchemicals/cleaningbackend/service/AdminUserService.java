@@ -1,6 +1,5 @@
 package com.premchemicals.cleaningbackend.service;
 
-import com.premchemicals.cleaningbackend.dto.ResetPasswordRequestDTO;
 import com.premchemicals.cleaningbackend.dto.UserResponseDTO;
 import com.premchemicals.cleaningbackend.mapper.UserMapper;
 import com.premchemicals.cleaningbackend.model.User;
@@ -35,23 +34,7 @@ public class AdminUserService {
                 .toList();
     }
 
-    public void resetPassword(
-            Long userId,
-            ResetPasswordRequestDTO request
-    ) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
-
-        user.setPassword(
-                passwordEncoder.encode(
-                        request.getNewPassword()
-                )
-        );
-
-        userRepository.save(user);
-    }
 
     public UserResponseDTO toggleStatus(Long userId) {
         User user = userRepository.findById(userId)
