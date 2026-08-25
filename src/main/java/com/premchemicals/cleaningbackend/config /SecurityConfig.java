@@ -224,10 +224,21 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
+        // 1. Strict CORS for internal API routes
         source.registerCorsConfiguration(
                 "/**",
                 configuration
         );
+
+        // 2. Permissive CORS for external payment callbacks and webhooks
+        CorsConfiguration publicConfiguration = new CorsConfiguration();
+        publicConfiguration.setAllowedOrigins(List.of("*"));
+        publicConfiguration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+        publicConfiguration.setAllowedHeaders(List.of("*"));
+        publicConfiguration.setAllowCredentials(false);
+
+        source.registerCorsConfiguration("/api/payments/phonepe/callback/**", publicConfiguration);
+        source.registerCorsConfiguration("/api/webhooks/**", publicConfiguration);
 
         return source;
     }
