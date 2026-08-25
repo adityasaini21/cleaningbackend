@@ -336,4 +336,31 @@ public class AuthController {
         userRepository.save(user);
         return "Password changed successfully";
     }
+
+    // =========================================
+    // DELETE ACCOUNT (ANONYMIZE PII)
+    // =========================================
+    @DeleteMapping("/delete-account")
+    @PreAuthorize("isAuthenticated()")
+    public String deleteAccount(Authentication authentication) {
+        String phoneNumber = authentication.getName();
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "User not found"));
+
+        user.setActive(false);
+        user.setFullName("Deleted User");
+        user.setEmail("deleted-" + user.getId() + "@nuklean.com");
+        user.setAddress("[REDACTED]");
+        user.setCity("[REDACTED]");
+        user.setState("[REDACTED]");
+        user.setPincode(null);
+        user.setLandmark("[REDACTED]");
+        user.setFcmToken(null);
+        user.setPassword("[DELETED]");
+        user.setPhoneNumber(String.format("9%09d", user.getId()));
+
+        userRepository.save(user);
+        return "Account deleted and PII anonymized successfully";
+    }
 }

@@ -95,11 +95,11 @@ public class OtpService {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                System.err.println("MiniMoth Send OTP Error: Status " + response.statusCode() + " - " + response.body());
+                System.err.println("MiniMoth Send OTP Error: Status " + response.statusCode());
                 throw new RuntimeException("MiniMoth API failed to send OTP. Code: " + response.statusCode());
             }
 
-            System.out.println("MiniMoth Send OTP Success: " + response.body());
+            System.out.println("MiniMoth Send OTP Success: [REDACTED]");
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to send OTP via MiniMoth: " + e.getMessage(), e);
@@ -149,10 +149,10 @@ public class OtpService {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
-                System.out.println("MiniMoth Verification Success: " + response.body());
+                System.out.println("MiniMoth Verification Success: [REDACTED]");
                 return true;
             } else {
-                System.err.println("MiniMoth Verification Failed: Status " + response.statusCode() + " - " + response.body());
+                System.err.println("MiniMoth Verification Failed: Status " + response.statusCode());
                 return false;
             }
 
