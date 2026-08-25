@@ -328,14 +328,28 @@ public class PaymentService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        String txnId = merchantTransactionId;
-        if (txnId == null || txnId.trim().isEmpty()) {
-            String dbPayId = order.getRazorpayOrderId();
-            if (dbPayId != null && dbPayId.startsWith("PHONEPE_")) {
-                txnId = dbPayId.substring("PHONEPE_".length());
-            } else {
+        String dbPayId = order.getRazorpayOrderId();
+        String expectedTxnId = (dbPayId != null && dbPayId.startsWith("PHONEPE_"))
+                ? dbPayId.substring("PHONEPE_".length())
+                : null;
+
+        String txnId;
+        if (merchantTransactionId != null && !merchantTransactionId.trim().isEmpty()) {
+            if (expectedTxnId == null || !expectedTxnId.equals(merchantTransactionId.trim())) {
+                throw new RuntimeException("Merchant transaction ID mismatch for order: " + orderId);
+            }
+            txnId = merchantTransactionId.trim();
+        } else {
+            if (expectedTxnId == null) {
                 throw new RuntimeException("Merchant transaction ID not found in database for order: " + orderId);
             }
+            txnId = expectedTxnId;
+        }
+
+        if (devMode) {
+            System.out.println("⚠️ [DEV MODE] Simulating successful PhonePe payment for order: " + orderId);
+            markSuccessInternal(order, "PHONEPE_MOCK_PAY_" + txnId);
+            return true;
         }
 
         String verifyHeaderInput = "/pg/v1/status/" + phonepeMerchantId + "/" + txnId + phonepeSaltKey;
@@ -360,6 +374,13 @@ public class PaymentService {
                     JSONObject data = responseJson.getJSONObject("data");
                     String state = data.getString("state");
                     if ("COMPLETED".equals(state)) {
+                        long paidAmountInPaise = data.getLong("amount");
+                        long expectedAmountInPaise = Math.round(order.getTotalAmount() * 100);
+                        
+                        if (paidAmountInPaise != expectedAmountInPaise) {
+                            throw new RuntimeException("Payment amount mismatch! Expected: " + expectedAmountInPaise + " paise, got: " + paidAmountInPaise + " paise.");
+                        }
+
                         String transactionId = data.getString("transactionId");
                         markSuccessInternal(order, "PHONEPE_PAY_" + transactionId);
                         return true;
