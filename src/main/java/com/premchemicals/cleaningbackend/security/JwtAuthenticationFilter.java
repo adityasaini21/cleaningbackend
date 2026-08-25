@@ -23,6 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(
@@ -48,6 +49,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
 
             String jwt = authHeader.substring(7);
+
+            if (tokenBlacklistService.isBlacklisted(jwt)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("{\"error\": \"Token has been invalidated (logged out).\"}");
+                return;
+            }
 
             String phoneNumber = jwtUtil.extractUsername(jwt);
             String role = jwtUtil.extractRole(jwt);

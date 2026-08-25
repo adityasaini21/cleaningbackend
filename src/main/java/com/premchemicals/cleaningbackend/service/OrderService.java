@@ -249,6 +249,14 @@ public class OrderService {
                 .orElseThrow(() ->
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
+        String phoneNumber = getLoggedInPhoneNumber();
+        User loggedInUser = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!order.getUser().getId().equals(loggedInUser.getId()) && loggedInUser.getRole() != Role.ROLE_ADMIN) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You do not own this order");
+        }
+
         return mapToResponse(order);
     }
 
@@ -355,6 +363,14 @@ public class OrderService {
     public OrderResponseDTO cancelOrder(Long orderId) {
 
         Order order = getOrderOrThrow(orderId);
+
+        String phoneNumber = getLoggedInPhoneNumber();
+        User loggedInUser = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!order.getUser().getId().equals(loggedInUser.getId()) && loggedInUser.getRole() != Role.ROLE_ADMIN) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You do not own this order");
+        }
 
         // 🔥 Already cancelled check
         if (order.getOrderStatus() == OrderStatus.CANCELLED) {

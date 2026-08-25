@@ -9,6 +9,7 @@ import com.premchemicals.cleaningbackend.model.User;
 import com.premchemicals.cleaningbackend.model.enums.Role;
 import com.premchemicals.cleaningbackend.repository.UserRepository;
 import com.premchemicals.cleaningbackend.security.JwtUtil;
+import com.premchemicals.cleaningbackend.security.TokenBlacklistService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -48,6 +49,8 @@ public class AuthController {
     private final GoogleAuthService googleAuthService;
 
     private final OtpService otpService;
+
+    private final TokenBlacklistService tokenBlacklistService;
 
     // =========================================
     // REGISTER CUSTOMER
@@ -362,5 +365,23 @@ public class AuthController {
 
         userRepository.save(user);
         return "Account deleted and PII anonymized successfully";
+    }
+
+    // =========================================
+    // LOGOUT (BLACKLIST JWT)
+    // =========================================
+    @PostMapping("/logout")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String jwt = authHeader.substring(7);
+            try {
+                java.util.Date expiration = jwtUtil.extractExpiration(jwt);
+                tokenBlacklistService.blacklistToken(jwt, expiration.getTime());
+            } catch (Exception e) {
+                System.err.println("Logout token parsing error: " + e.getMessage());
+            }
+        }
+        return ResponseEntity.ok(java.util.Map.of("message", "Logged out successfully"));
     }
 }
