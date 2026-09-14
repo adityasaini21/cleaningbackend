@@ -70,8 +70,8 @@ def main():
         # Floor Cleaner
         ("White Phenyl 1L", "Classic White Phenyl with natural pine fragrance for clean and fresh floors.", 30.0, 100, "https://images.unsplash.com/photo-1604335399105-a0c585fd81a1", "Floor Cleaner"),
         ("White Phenyl 5L", "Classic White Phenyl with natural pine fragrance for clean and fresh floors.", 125.0, 100, "https://images.unsplash.com/photo-1604335399105-a0c585fd81a1", "Floor Cleaner"),
-        ("Phenyl Compound 1L -> 25L", "Highly concentrated Phenyl Compound. 1 Litre dilutes up to 25 Litres of active white floor phenyl.", 300.0, 100, "https://images.unsplash.com/photo-1585421514738-01798e348b17", "Floor Cleaner"),
-        ("Phenyl Compound 500ml -> 12.5L", "Highly concentrated Phenyl Compound. 500ml dilutes up to 12.5 Litres of active floor phenyl.", 160.0, 100, "https://images.unsplash.com/photo-1585421514738-01798e348b17", "Floor Cleaner"),
+        ("Phenyl Compound 1L -> 25L", "Highly concentrated Phenyl Compound. 1 Litre dilutes up to 25 Litres of active white floor phenyl.", 300.0, 100, "https://res.cloudinary.com/dxfph9w2w/image/upload/v1772515521/Phenyl_Compund_z0butq.png", "Floor Cleaner"),
+        ("Phenyl Compound 500ml -> 12.5L", "Highly concentrated Phenyl Compound. 500ml dilutes up to 12.5 Litres of active floor phenyl.", 160.0, 100, "https://res.cloudinary.com/dxfph9w2w/image/upload/v1772515521/Phenyl_Compund_z0butq.png", "Floor Cleaner"),
         ("Pink Phenyl 1L", "Perfumed Pink Phenyl with long-lasting floral fragrance for deep cleaning.", 70.0, 100, "https://images.unsplash.com/photo-1604335399105-a0c585fd81a1", "Floor Cleaner"),
         ("Pink Phenyl 5L", "Perfumed Pink Phenyl with long-lasting floral fragrance for deep cleaning.", 300.0, 100, "https://images.unsplash.com/photo-1604335399105-a0c585fd81a1", "Floor Cleaner"),
         ("Pink Phenyl Compound 1L -> 30L", "Concentrated Pink Phenyl. 1 Litre makes up to 30 Litres of floral pink floor cleaner.", 350.0, 100, "https://images.unsplash.com/photo-1585421514738-01798e348b17", "Floor Cleaner"),

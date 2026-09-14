@@ -29,6 +29,9 @@ import java.util.List;
 import com.premchemicals.cleaningbackend.model.User;
 import com.premchemicals.cleaningbackend.model.enums.Role;
 import com.premchemicals.cleaningbackend.repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -65,9 +68,11 @@ public class PaymentService {
     // =========================================================
 
 
-    @Transactional
 
+
+    @Transactional
     public String createRazorpayOrder(Long orderId) throws RazorpayException {
+
         if (keyId.isBlank() || keySecret.isBlank()) {
             throw new UnsupportedOperationException(
                     "Razorpay integration is disabled.");
@@ -75,6 +80,28 @@ public class PaymentService {
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // 🔐 Verify order ownership
+        String phoneNumber = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        User loggedInUser = userRepository
+                .findByPhoneNumber(phoneNumber)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
+
+        boolean isAdmin =
+                loggedInUser.getRole() == Role.ROLE_ADMIN;
+
+        if (!isAdmin &&
+                !order.getUser().getId().equals(loggedInUser.getId())) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Access denied: You do not own this order");
+        }
 
         if (order.getPaymentStatus() != PaymentStatus.PENDING) {
             throw new RuntimeException("Payment already processed");

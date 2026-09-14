@@ -199,46 +199,24 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration =
-                new CorsConfiguration();
-
-        configuration.setAllowedOrigins(allowedOrigins);
-
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(
-
                 List.of(
                         "GET",
                         "POST",
                         "PUT",
                         "DELETE",
-                        "OPTIONS"
+                        "OPTIONS",
+                        "HEAD",
+                        "PATCH"
                 )
         );
-
-        configuration.setAllowedHeaders(
-                List.of("*")
-        );
-
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
-
-        // 1. Strict CORS for internal API routes
-        source.registerCorsConfiguration(
-                "/**",
-                configuration
-        );
-
-        // 2. Permissive CORS for external payment callbacks and webhooks
-        CorsConfiguration publicConfiguration = new CorsConfiguration();
-        publicConfiguration.setAllowedOrigins(List.of("*"));
-        publicConfiguration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
-        publicConfiguration.setAllowedHeaders(List.of("*"));
-        publicConfiguration.setAllowCredentials(false);
-
-        source.registerCorsConfiguration("/api/payments/phonepe/callback/**", publicConfiguration);
-        source.registerCorsConfiguration("/api/webhooks/**", publicConfiguration);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }
