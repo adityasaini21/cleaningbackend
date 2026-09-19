@@ -63,6 +63,7 @@ public class GoogleMapsService {
                 Pattern pattern = Pattern.compile("\"distanceMeters\"\\s*:\\s*(\\d+)");
                 Matcher matcher = pattern.matcher(body);
                 if (matcher.find()) {
+                    System.out.println("✅ [Google Maps] Route API hit successfully! Road distance: " + matcher.group(1) + " meters.");
                     return Double.parseDouble(matcher.group(1));
                 }
             } else {
@@ -124,6 +125,7 @@ public class GoogleMapsService {
                 if (latMatcher.find() && lngMatcher.find()) {
                     double lat = Double.parseDouble(latMatcher.group(1));
                     double lng = Double.parseDouble(lngMatcher.group(1));
+                    System.out.println("✅ [Google Maps] Geocoding API hit successfully! Coordinates: lat=" + lat + ", lng=" + lng);
                     return new double[]{lat, lng};
                 }
             } else {
