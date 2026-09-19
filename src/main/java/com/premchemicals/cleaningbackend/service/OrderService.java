@@ -124,7 +124,7 @@ public class OrderService {
         order.setOrderItems(orderItems);
 
         // 🚗 CALCULATE DELIVERY CHARGE BY ROAD DISTANCE
-        double deliveryCharge = 30.0;
+        double deliveryCharge = 49.0;
         double lat = 26.4764; // Default store lat
         double lng = 80.3124; // Default store lng
 
@@ -140,7 +140,7 @@ public class OrderService {
         double distanceInMeters = googleMapsService.getRoadDistanceInMeters(lat, lng);
         System.out.println("🚗 Calculated road distance for order: " + distanceInMeters + " meters.");
         if (distanceInMeters > 5000.0) {
-            deliveryCharge = 50.0;
+            deliveryCharge = 79.0;
         }
 
         order.setDeliveryCharge(deliveryCharge);
@@ -200,9 +200,9 @@ public class OrderService {
         }
 
         double distanceInMeters = googleMapsService.getRoadDistanceInMeters(lat, lng);
-        double deliveryCharge = 30.0;
+        double deliveryCharge = 49.0;
         if (distanceInMeters > 5000.0) {
-            deliveryCharge = 50.0;
+            deliveryCharge = 79.0;
         }
         Map<String, Object> result = new HashMap<>();
         result.put("distanceMeters", distanceInMeters);
