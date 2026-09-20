@@ -125,8 +125,8 @@ public class OrderService {
 
         // 🚗 CALCULATE DELIVERY CHARGE BY ROAD DISTANCE
         double deliveryCharge = 49.0;
-        double lat = 26.4764; // Default store lat
-        double lng = 80.3124; // Default store lng
+        double lat = 26.4502508; // Default store lat (Prem Chemicals, Govind Nagar, Kanpur)
+        double lng = 80.2958044; // Default store lng
 
         double[] coords = googleMapsService.getCoordinatesFromAddress(
                 request.getShippingAddress(),
@@ -190,8 +190,8 @@ public class OrderService {
     }
 
     public Map<String, Object> getDeliveryChargeAndDistance(String address, String pincode) {
-        double lat = 26.4764; // Default store coordinates as fallback origin
-        double lng = 80.3124;
+        double lat = 26.4502508; // Default store coordinates as fallback origin (Prem Chemicals, Govind Nagar, Kanpur)
+        double lng = 80.2958044;
 
         double[] coords = googleMapsService.getCoordinatesFromAddress(address, pincode);
         if (coords != null) {

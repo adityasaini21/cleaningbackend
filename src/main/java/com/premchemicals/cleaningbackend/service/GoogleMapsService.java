@@ -18,10 +18,10 @@ public class GoogleMapsService {
     @Value("${GOOGLE_MAPS_API_KEY:}")
     private String apiKey;
 
-    @Value("${store.latitude:26.4764}")
+    @Value("${store.latitude:26.4502508}")
     private double storeLatitude;
 
-    @Value("${store.longitude:80.3124}")
+    @Value("${store.longitude:80.2958044}")
     private double storeLongitude;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
