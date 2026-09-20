@@ -22,7 +22,7 @@ public class JwtUtil {
     @Value("${jwt.secret:${JWT_SECRET:cleaning_backend_super_secret_key_2026_secure_application_987654321}}")
     private String secret;
 
-    @Value("${jwt.expiration:${JWT_EXPIRATION:2592000000}}")
+    @Value("${jwt.expiration:${JWT_EXPIRATION:15552000000}}")
     private long jwtExpiration;
 
     private SecretKey key;

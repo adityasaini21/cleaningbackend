@@ -577,6 +577,11 @@ public class OrderService {
         dto.setShippingAddress(order.getShippingAddress());
 
         dto.setPhoneNumber(order.getPhoneNumber());
+        dto.setCustomerName(
+                order.getUser() != null && order.getUser().getFullName() != null
+                        ? order.getUser().getFullName()
+                        : ""
+        );
         dto.setDeliveryBoyName(
                 order.getDeliveryBoyName()
         );

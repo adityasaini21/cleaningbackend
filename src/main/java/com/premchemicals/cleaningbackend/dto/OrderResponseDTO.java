@@ -24,6 +24,7 @@ public class OrderResponseDTO {
 
     private String shippingAddress;
     private String phoneNumber;
+    private String customerName;
 
     private String deliveryBoyName;
 
