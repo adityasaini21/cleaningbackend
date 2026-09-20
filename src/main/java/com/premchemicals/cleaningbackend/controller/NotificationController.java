@@ -70,6 +70,19 @@ public class NotificationController {
     }
 
     // =========================================
+    // CLEAR ALL NOTIFICATIONS
+    // =========================================
+    @DeleteMapping("/clear-all")
+    @PreAuthorize("isAuthenticated()")
+    public Map<String, String> clearAllNotifications() {
+        notificationService.clearAllNotifications();
+        return Map.of(
+                "message",
+                "All notifications cleared successfully"
+        );
+    }
+
+    // =========================================
     // DELETE NOTIFICATION
     // =========================================
     @DeleteMapping("/{id}")

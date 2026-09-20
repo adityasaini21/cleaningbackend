@@ -18,6 +18,10 @@ public interface NotificationRepository
 
     java.util.Optional<Notification> findByIdAndUser(Long id, User user);
 
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteByUser(User user);
+
     // =========================================
     // UNREAD COUNT
     // =========================================

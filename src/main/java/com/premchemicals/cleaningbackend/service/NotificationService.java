@@ -156,6 +156,16 @@ public User getTestUser() {
     }
 
     // =========================================
+    // CLEAR ALL NOTIFICATIONS
+    // =========================================
+    @org.springframework.transaction.annotation.Transactional
+    public void clearAllNotifications() {
+        User user = userRepository.findByPhoneNumber(getLoggedInPhoneNumber())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        notificationRepository.deleteByUser(user);
+    }
+
+    // =========================================
     // UNREAD COUNT
     // =========================================
 
