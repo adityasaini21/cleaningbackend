@@ -17,16 +17,16 @@ import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    // ✅ Get orders of specific user WITH items + product
-    @EntityGraph(attributePaths = {"orderItems", "orderItems.product"})
+    // ✅ Get orders of specific user WITH items + product + user
+    @EntityGraph(attributePaths = {"orderItems", "orderItems.product", "user"})
     List<Order> findByUser(User user);
 
-    @EntityGraph(attributePaths = {"orderItems", "orderItems.product"})
+    @EntityGraph(attributePaths = {"orderItems", "orderItems.product", "user"})
     Optional<Order> findWithItemsById(Long id);
 
-    // ✅ Get all orders WITH items + product (for admin)
+    // ✅ Get all orders WITH items + product + user (for admin)
     @Override
-    @EntityGraph(attributePaths = {"orderItems", "orderItems.product"})
+    @EntityGraph(attributePaths = {"orderItems", "orderItems.product", "user"})
     List<Order> findAll();
 
     // ✅ Required for Razorpay Webhook
@@ -37,11 +37,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // =========================================================
 
     // Get orders by status
-    @EntityGraph(attributePaths = {"orderItems", "orderItems.product"})
+    @EntityGraph(attributePaths = {"orderItems", "orderItems.product", "user"})
     List<Order> findByOrderStatus(OrderStatus status);
 
     // Get orders between dates
-    @EntityGraph(attributePaths = {"orderItems", "orderItems.product"})
+    @EntityGraph(attributePaths = {"orderItems", "orderItems.product", "user"})
     List<Order> findByOrderDateBetween(LocalDateTime start, LocalDateTime end);
 
     // Revenue between dates
