@@ -940,4 +940,12 @@ public class OrderService {
         return revenue != null ? revenue : 0.0;
     }
 
+    // =========================================================
+    // 🔥 ADMIN: CLEAR ALL ORDER HISTORY
+    // =========================================================
+    @Transactional
+    public void deleteAllOrders() {
+        orderRepository.deleteAll();
+    }
+
 }
