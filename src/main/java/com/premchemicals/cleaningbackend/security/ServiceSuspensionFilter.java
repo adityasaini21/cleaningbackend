@@ -30,6 +30,9 @@ public class ServiceSuspensionFilter implements Filter {
         if (serviceStatusService.isServiceSuspended()) {
             boolean isAllowed = path.startsWith("/admin/") || 
                                 path.startsWith("/auth/") || 
+                                path.startsWith("/api/payment/verify") ||
+                                path.startsWith("/api/payment/webhook") ||
+                                path.startsWith("/api/webhooks") ||
                                 path.equals("/api/service-status") || 
                                 path.startsWith("/uploads/");
 
