@@ -105,10 +105,14 @@ public class ReviewServiceImpl
         Review saved =
                 reviewRepository.save(review);
 
+        String displayName = (user.getFullName() != null && !user.getFullName().trim().isEmpty())
+                ? user.getFullName().trim()
+                : "Customer";
+
         return ReviewResponseDTO
                 .builder()
                 .id(saved.getId())
-                .username(user.getPhoneNumber())
+                .username(displayName)
                 .rating(saved.getRating())
                 .comment(saved.getComment())
                 .createdAt(saved.getCreatedAt())
@@ -215,11 +219,17 @@ public class ReviewServiceImpl
 
                                             review.getUser().getId().equals(currentUser.getId());
 
+                            String displayName = (review.getUser() != null &&
+                                    review.getUser().getFullName() != null &&
+                                    !review.getUser().getFullName().trim().isEmpty())
+                                    ? review.getUser().getFullName().trim()
+                                    : "Customer";
+
                             return ReviewResponseDTO.builder()
 
                                     .id(review.getId())
 
-                                    .username(review.getUser().getPhoneNumber())
+                                    .username(displayName)
 
                                     .rating(review.getRating())
 
