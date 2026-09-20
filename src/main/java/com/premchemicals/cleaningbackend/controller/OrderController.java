@@ -105,7 +105,7 @@ public class OrderController {
     // =====================================================
 
     @GetMapping("/all")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN') or hasAnyRole('ADMIN', 'ROLE_ADMIN')")
     public List<OrderResponseDTO> getAllOrders() {
 
         return orderService.getAllOrders();
@@ -116,7 +116,7 @@ public class OrderController {
     // =====================================================
 
     @PutMapping("/{orderId}/status")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN') or hasAnyRole('ADMIN', 'ROLE_ADMIN')")
     public OrderResponseDTO updateOrderStatus(
 
             @PathVariable Long orderId,
