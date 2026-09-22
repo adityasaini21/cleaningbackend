@@ -24,6 +24,8 @@ import java.util.*;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final PaymentTransactionRepository paymentTransactionRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final ProductService productService;
@@ -950,6 +952,8 @@ public class OrderService {
     // =========================================================
     @Transactional
     public void deleteAllOrders() {
+        paymentTransactionRepository.deleteAll();
+        orderItemRepository.deleteAll();
         orderRepository.deleteAll();
     }
 
