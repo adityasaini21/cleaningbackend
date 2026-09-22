@@ -233,7 +233,7 @@ public class PaymentService {
         notificationService.createNotification(
                 user,
                 "Order Placed",
-                "Your order #" + order.getId() + " has been placed successfully."
+                "Your order #NUK" + order.getId() + " has been placed successfully."
         );
 
         List<User> admins = userRepository.findAll().stream()
@@ -244,7 +244,7 @@ public class PaymentService {
             notificationService.createNotification(
                     admin,
                     "New Order Received",
-                    "New order #" + order.getId() + " placed by " + user.getFullName()
+                    "New order #NUK" + order.getId() + " placed by " + user.getFullName()
             );
         }
     }

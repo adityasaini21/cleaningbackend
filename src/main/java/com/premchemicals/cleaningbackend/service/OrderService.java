@@ -164,7 +164,7 @@ public class OrderService {
             notificationService.createNotification(
                     user,
                     "Order Placed",
-                    "Your order #" + order.getId() +
+                    "Your order #NUK" + order.getId() +
                             " has been placed successfully."
             );
 
@@ -178,7 +178,7 @@ public class OrderService {
                 notificationService.createNotification(
                         admin,
                         "New Order Received",
-                        "New order #" + order.getId() +
+                        "New order #NUK" + order.getId() +
                                 " placed by " + user.getFullName()
                 );
             }
@@ -299,7 +299,7 @@ public class OrderService {
         String title = "Order Update";
 
         String message =
-                "Your order #" + order.getId() +
+                "Your order #NUK" + order.getId() +
                         " status changed to " +
                         newStatus.name().replace("_", " ");
 
@@ -312,7 +312,7 @@ public class OrderService {
             case CONFIRMED:
 
                 message =
-                        "Your order #" + order.getId() +
+                        "Your order #NUK" + order.getId() +
                                 " has been confirmed ✅";
                 break;
 
@@ -320,21 +320,21 @@ public class OrderService {
             case OUT_FOR_DELIVERY:
 
                 message =
-                        "Your order #" + order.getId() +
+                        "Your order #NUK" + order.getId() +
                                 " is out for delivery 📦";
                 break;
 
             case DELIVERED:
 
                 message =
-                        "Your order #" + order.getId() +
+                        "Your order #NUK" + order.getId() +
                                 " has been delivered 🎉";
                 break;
 
             case CANCELLED:
 
                 message =
-                        "Your order #" + order.getId() +
+                        "Your order #NUK" + order.getId() +
                                 " has been cancelled ❌";
                 break;
         }
