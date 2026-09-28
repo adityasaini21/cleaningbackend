@@ -96,10 +96,6 @@ public class OrderService {
             Product product = productRepository.findById(item.getProductId())
                     .orElseThrow(() -> new RuntimeException("Product not found"));
 
-            if (product.getStock() < item.getQuantity()) {
-                throw new RuntimeException("Insufficient stock for " + product.getName());
-            }
-
             OrderItem orderItem = new OrderItem();
 
             orderItem.setOrder(order);
@@ -110,10 +106,6 @@ public class OrderService {
             totalAmount += product.getPrice() * item.getQuantity();
 
             orderItems.add(orderItem);
-
-            if (paymentMethod == PaymentMethod.COD) {
-                product.setStock(product.getStock() - item.getQuantity());
-            }
         }
 
         if (totalAmount < 200.0) {
@@ -414,12 +406,6 @@ public class OrderService {
         // 🔥 CANCEL ORDER
         order.setOrderStatus(OrderStatus.CANCELLED);
 
-        // 🔄 RESTORE STOCK
-        for (OrderItem item : order.getOrderItems()) {
-            Product product = item.getProduct();
-            product.setStock(product.getStock() + item.getQuantity());
-        }
-
         return mapToResponse(order);
     }
 
@@ -431,13 +417,6 @@ public class OrderService {
     public void markPaymentSuccess(Long orderId) {
 
         Order order = getOrderOrThrow(orderId);
-
-        for (OrderItem item : order.getOrderItems()) {
-
-            Product product = item.getProduct();
-
-            product.setStock(product.getStock() - item.getQuantity());
-        }
 
         order.setPaymentStatus(PaymentStatus.COMPLETED);
         order.setOrderStatus(OrderStatus.CONFIRMED);
