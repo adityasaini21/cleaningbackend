@@ -90,7 +90,9 @@ public class SecurityConfig {
 
                                 "/auth/check-phone",
 
-                                "/api/service-status"
+                                "/api/service-status",
+
+                                "/api/logs/**"
 
                         ).permitAll()
 
