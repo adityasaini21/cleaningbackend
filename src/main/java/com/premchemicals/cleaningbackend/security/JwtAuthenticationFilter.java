@@ -64,11 +64,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 userRepository.findByPhoneNumber(phoneNumber).ifPresent(user -> {
-                    if (user.isActive()) {
-                        List<SimpleGrantedAuthority> authorities =
-                                Collections.singletonList(
-                                        new SimpleGrantedAuthority(role)
-                                );
+                    boolean isAdmin = (user.getRole() != null && user.getRole().name().contains("ADMIN")) || role.contains("ADMIN");
+                    if (user.isActive() || isAdmin) {
+                        String primaryRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                        String altRole = role.replace("ROLE_", "");
+
+                        List<SimpleGrantedAuthority> authorities = List.of(
+                                new SimpleGrantedAuthority(primaryRole),
+                                new SimpleGrantedAuthority(altRole)
+                        );
 
                         UsernamePasswordAuthenticationToken authToken =
                                 new UsernamePasswordAuthenticationToken(

@@ -177,7 +177,7 @@ public class SecurityConfig {
 
                                 .requestMatchers(
                                         "/admin/**"
-                                ).hasRole("ADMIN")
+                                ).hasAnyAuthority("ROLE_ADMIN", "ADMIN")
 
                         // =====================================
                         // EVERYTHING ELSE

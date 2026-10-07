@@ -27,12 +27,20 @@ public class AdminInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        if (adminPhone == null || adminPhone.isBlank()) return;
 
-        if (userRepository.existsByPhoneNumber(adminPhone)) {
+        User admin = userRepository.findByPhoneNumber(adminPhone).orElse(null);
+        if (admin != null) {
+            admin.setActive(true);
+            admin.setRole(Role.ROLE_ADMIN);
+            userRepository.save(admin);
+            System.out.println("======================================");
+            System.out.println("ADMIN ACCOUNT VERIFIED & ACTIVATED");
+            System.out.println("======================================");
             return;
         }
 
-        User admin = User.builder()
+        admin = User.builder()
                 .fullName(adminFullName)
                 .phoneNumber(adminPhone)
                 .password(passwordEncoder.encode(adminPassword))
