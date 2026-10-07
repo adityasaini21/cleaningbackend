@@ -64,6 +64,24 @@ public class AdminUserService {
 
         user.setActive(!user.isActive());
         user.setDeletedByUser(false);
+
+        // Sanitize legacy fields so JPA bean validation never fails on save
+        if (user.getPhoneNumber() != null) {
+            String cleanPhone = user.getPhoneNumber().replaceAll("[^0-9]", "");
+            if (cleanPhone.length() > 10) {
+                cleanPhone = cleanPhone.substring(cleanPhone.length() - 10);
+            }
+            if (cleanPhone.matches("^[6-9]\\d{9}$")) {
+                user.setPhoneNumber(cleanPhone);
+            }
+        }
+        if (user.getEmail() != null && (user.getEmail().isBlank() || !user.getEmail().contains("@"))) {
+            user.setEmail(null);
+        }
+        if (user.getPincode() != null && !user.getPincode().matches("^\\d{6}$")) {
+            user.setPincode(null);
+        }
+
         User savedUser = userRepository.save(user);
         return userMapper.toDTO(savedUser);
     }
