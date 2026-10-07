@@ -39,6 +39,12 @@ public class AdminInitializer implements CommandLineRunner {
         String name = (adminFullName != null && !adminFullName.isBlank()) ? adminFullName.trim() : "Admin User";
 
         try {
+            userRepository.addDeletedByUserColumnIfNotExists();
+        } catch (Exception e) {
+            System.err.println("Column migration note: " + e.getMessage());
+        }
+
+        try {
             User admin = userRepository.findByPhoneNumber(cleanPhone).orElse(null);
             if (admin != null) {
                 admin.setActive(true);

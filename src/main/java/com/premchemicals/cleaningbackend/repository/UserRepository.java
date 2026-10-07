@@ -9,10 +9,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 
 public interface UserRepository extends JpaRepository<User, Long> {
@@ -42,4 +42,9 @@ ORDER BY u.fullName
             @Param("role") Role role,
             @Param("query") String query
     );
+
+    @Modifying
+    @Transactional
+    @Query(value = "ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_by_user boolean DEFAULT false", nativeQuery = true)
+    void addDeletedByUserColumnIfNotExists();
 }

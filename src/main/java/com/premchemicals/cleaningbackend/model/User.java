@@ -65,7 +65,7 @@ public class User {
     private boolean active = true;
 
     @Builder.Default
-    @Column(nullable = false)
+    @Column(columnDefinition = "boolean default false")
     private boolean deletedByUser = false;
 
     @Email(message = "Invalid email")
