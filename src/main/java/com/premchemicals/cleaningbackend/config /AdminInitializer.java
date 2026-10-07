@@ -27,31 +27,44 @@ public class AdminInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (adminPhone == null || adminPhone.isBlank()) return;
-
-        User admin = userRepository.findByPhoneNumber(adminPhone).orElse(null);
-        if (admin != null) {
-            admin.setActive(true);
-            admin.setRole(Role.ROLE_ADMIN);
-            userRepository.save(admin);
+        if (adminPhone == null || adminPhone.trim().isEmpty() || !adminPhone.trim().matches("^[6-9]\\d{9}$")) {
             System.out.println("======================================");
-            System.out.println("ADMIN ACCOUNT VERIFIED & ACTIVATED");
+            System.out.println("ADMIN_PHONE NOT CONFIGURED OR INVALID - SKIPPING INITIALIZER");
             System.out.println("======================================");
             return;
         }
 
-        admin = User.builder()
-                .fullName(adminFullName)
-                .phoneNumber(adminPhone)
-                .password(passwordEncoder.encode(adminPassword))
-                .role(Role.ROLE_ADMIN)
-                .active(true)
-                .build();
+        String cleanPhone = adminPhone.trim();
+        String pass = (adminPassword != null && !adminPassword.isBlank()) ? adminPassword.trim() : "admin123";
+        String name = (adminFullName != null && !adminFullName.isBlank()) ? adminFullName.trim() : "Admin User";
 
-        userRepository.save(admin);
+        try {
+            User admin = userRepository.findByPhoneNumber(cleanPhone).orElse(null);
+            if (admin != null) {
+                admin.setActive(true);
+                admin.setRole(Role.ROLE_ADMIN);
+                userRepository.save(admin);
+                System.out.println("======================================");
+                System.out.println("ADMIN ACCOUNT VERIFIED & ACTIVATED: " + cleanPhone);
+                System.out.println("======================================");
+                return;
+            }
 
-        System.out.println("======================================");
-        System.out.println("ADMIN ACCOUNT CREATED SUCCESSFULLY");
-        System.out.println("======================================");
+            admin = User.builder()
+                    .fullName(name)
+                    .phoneNumber(cleanPhone)
+                    .password(passwordEncoder.encode(pass))
+                    .role(Role.ROLE_ADMIN)
+                    .active(true)
+                    .build();
+
+            userRepository.save(admin);
+
+            System.out.println("======================================");
+            System.out.println("ADMIN ACCOUNT CREATED SUCCESSFULLY: " + cleanPhone);
+            System.out.println("======================================");
+        } catch (Exception e) {
+            System.err.println("AdminInitializer Warning: " + e.getMessage());
+        }
     }
 }
