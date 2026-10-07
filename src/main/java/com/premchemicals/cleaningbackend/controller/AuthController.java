@@ -191,6 +191,11 @@ public class AuthController {
         User user = userRepository.findByPhoneNumber(phone).orElse(null);
         boolean isNewUser = false;
 
+        if (user != null && !user.isActive() && !user.isDeletedByUser()) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Your account has been suspended by administration. Please contact customer care for support."));
+        }
+
         if (user == null) {
             // User does not exist, so register them!
             String name = request.getFullName();
@@ -206,8 +211,18 @@ public class AuthController {
                     .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                     .role(Role.ROLE_USER)
                     .active(true)
+                    .deletedByUser(false)
                     .build();
 
+            userRepository.save(user);
+            isNewUser = true;
+        } else if (!user.isActive() && user.isDeletedByUser()) {
+            // Previously user-deleted account logging back in: Reactivate as a fresh user!
+            if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+                user.setFullName(request.getFullName().trim());
+            }
+            user.setActive(true);
+            user.setDeletedByUser(false);
             userRepository.save(user);
             isNewUser = true;
         }
@@ -228,7 +243,12 @@ public class AuthController {
     // =========================================
     @GetMapping("/check-phone")
     public ResponseEntity<?> checkPhoneExists(@RequestParam String phoneNumber) {
-        boolean exists = userRepository.existsByPhoneNumber(phoneNumber.trim());
+        User user = userRepository.findByPhoneNumber(phoneNumber.trim()).orElse(null);
+        if (user != null && !user.isActive() && !user.isDeletedByUser()) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Your account has been suspended by administration. Please contact customer care for support."));
+        }
+        boolean exists = (user != null && user.isActive());
         return ResponseEntity.ok(Map.of("exists", exists));
     }
 
@@ -352,19 +372,18 @@ public class AuthController {
                         org.springframework.http.HttpStatus.NOT_FOUND, "User not found"));
 
         user.setActive(false);
-        user.setFullName("Deleted User");
-        user.setEmail("deleted-" + user.getId() + "@nuklean.com");
-        user.setAddress("[REDACTED]");
-        user.setCity("[REDACTED]");
-        user.setState("[REDACTED]");
+        user.setDeletedByUser(true);
+        // Clear sensitive address details and tokens, but preserve fullName, phoneNumber & email for Admin records
+        user.setAddress(null);
+        user.setCity(null);
+        user.setState(null);
         user.setPincode(null);
-        user.setLandmark("[REDACTED]");
+        user.setLandmark(null);
         user.setFcmToken(null);
         user.setPassword("[DELETED]");
-        user.setPhoneNumber(String.format("9%09d", user.getId()));
 
         userRepository.save(user);
-        return "Account deleted and PII anonymized successfully";
+        return "Account deactivated and user data cleared successfully";
     }
 
     // =========================================

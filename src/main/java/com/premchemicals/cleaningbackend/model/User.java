@@ -64,6 +64,10 @@ public class User {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean deletedByUser = false;
+
     @Email(message = "Invalid email")
     @Column(length = 100)
     private String email;

@@ -14,4 +14,6 @@ public class UserResponseDTO {
     private String email;
 
     private boolean active;
+
+    private boolean deletedByUser;
 }

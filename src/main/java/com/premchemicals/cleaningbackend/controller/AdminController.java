@@ -39,4 +39,14 @@ public class AdminController {
     ) {
         return adminUserService.toggleStatus(userId);
     }
+
+    // =========================================
+    // CLEAR BLOCKED USERS
+    // =========================================
+
+    @DeleteMapping("/clear-blocked")
+    public String clearBlockedUsers() {
+        adminUserService.clearBlockedUsers();
+        return "Blocked users list cleared successfully";
+    }
 }

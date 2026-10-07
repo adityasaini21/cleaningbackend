@@ -16,6 +16,7 @@ public class UserMapper {
         dto.setPhoneNumber(user.getPhoneNumber());
         dto.setEmail(user.getEmail());
         dto.setActive(user.isActive());
+        dto.setDeletedByUser(user.isDeletedByUser());
 
         return dto;
     }
