@@ -53,6 +53,11 @@ ORDER BY u.fullName
 
     @Modifying
     @Transactional
+    @Query(value = "UPDATE users SET active = true WHERE (active IS FALSE OR active IS NULL) AND (deleted_by_user IS FALSE OR deleted_by_user IS NULL)", nativeQuery = true)
+    void fixInactiveNonDeletedUsers();
+
+    @Modifying
+    @Transactional
     @Query(value = "UPDATE users SET active = true WHERE role = 'ROLE_ADMIN'", nativeQuery = true)
     void ensureAdminsAreActive();
 }
