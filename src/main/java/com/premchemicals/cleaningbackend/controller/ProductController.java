@@ -11,6 +11,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,10 +25,11 @@ public class ProductController {
     private final ProductService productService;
 
     // =========================================
-    // ✅ CREATE PRODUCT
+    // 🔐 CREATE PRODUCT - ADMIN ONLY
     // =========================================
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public ProductResponseDTO createProduct(
             @Valid @RequestBody ProductRequestDTO request) {
 
@@ -43,9 +45,10 @@ public class ProductController {
     }
 
     // =========================================
-    // ✅ UPDATE PRODUCT
+    // 🔐 UPDATE PRODUCT - ADMIN ONLY
     // =========================================
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ProductResponseDTO updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductRequestDTO request) {
@@ -54,16 +57,18 @@ public class ProductController {
     }
 
     // =========================================
-    // ✅ DELETE PRODUCT (SOFT DELETE)
+    // 🔐 DELETE PRODUCT - ADMIN ONLY
     // =========================================
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteProduct(@PathVariable Long id) {
+
         productService.deleteProduct(id);
     }
 
     // =========================================
-    // 🔥 MAIN PRODUCT LIST (FILTER + SEARCH + PAGINATION)
+    // 🔥 MAIN PRODUCT LIST
     // =========================================
     @GetMapping
     public List<ProductResponseDTO> getProducts(
@@ -74,7 +79,7 @@ public class ProductController {
     }
 
     // =========================================
-    // 🔍 SEARCH (Optional legacy support)
+    // 🔍 SEARCH
     // =========================================
     @GetMapping("/search")
     public List<ProductResponseDTO> searchProducts(
@@ -84,18 +89,20 @@ public class ProductController {
     }
 
     // =========================================
-// 🔥 GET DELETED PRODUCTS
-// =========================================
+    // 🔐 GET DELETED PRODUCTS - ADMIN ONLY
+    // =========================================
     @GetMapping("/deleted")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<ProductResponseDTO> getDeletedProducts() {
 
         return productService.getDeletedProducts();
     }
 
     // =========================================
-// 🔥 RESTORE PRODUCT
-// =========================================
+    // 🔐 RESTORE PRODUCT - ADMIN ONLY
+    // =========================================
     @PutMapping("/{id}/restore")
+    @PreAuthorize("hasRole('ADMIN')")
     public ProductResponseDTO restoreProduct(
             @PathVariable Long id) {
 
@@ -103,9 +110,10 @@ public class ProductController {
     }
 
     // =========================================
-    // 📦 PAGINATION ONLY (Admin style)
+    // 🔐 PAGINATION - ADMIN ONLY
     // =========================================
     @GetMapping("/paged")
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<ProductResponseDTO> getAllProductsPaged(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,

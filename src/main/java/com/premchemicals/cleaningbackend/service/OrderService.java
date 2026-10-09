@@ -86,6 +86,13 @@ public class OrderService {
                                 .toUpperCase()
                 );
 
+        if (paymentMethod == PaymentMethod.ONLINE) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Online payment is currently disabled. Please select Cash on Delivery (COD)."
+            );
+        }
+
         order.setPaymentMethod(paymentMethod);
 
         double totalAmount = 0;

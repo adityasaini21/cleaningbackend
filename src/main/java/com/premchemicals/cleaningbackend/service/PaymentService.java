@@ -3,6 +3,7 @@ package com.premchemicals.cleaningbackend.service;
 import com.premchemicals.cleaningbackend.model.Order;
 import com.premchemicals.cleaningbackend.model.PaymentTransaction;
 import com.premchemicals.cleaningbackend.model.enums.OrderStatus;
+import com.premchemicals.cleaningbackend.model.enums.PaymentMethod;
 import com.premchemicals.cleaningbackend.model.enums.PaymentStatus;
 import com.premchemicals.cleaningbackend.repository.OrderRepository;
 import com.premchemicals.cleaningbackend.repository.PaymentTransactionRepository;
@@ -29,6 +30,7 @@ import java.util.List;
 import com.premchemicals.cleaningbackend.model.User;
 import com.premchemicals.cleaningbackend.model.enums.Role;
 import com.premchemicals.cleaningbackend.repository.UserRepository;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
@@ -72,73 +74,10 @@ public class PaymentService {
 
     @Transactional
     public String createRazorpayOrder(Long orderId) throws RazorpayException {
-
-        if (keyId.isBlank() || keySecret.isBlank()) {
-            throw new UnsupportedOperationException(
-                    "Razorpay integration is disabled.");
-        }
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-
-        // 🔐 Verify order ownership
-        String phoneNumber = SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getName();
-
-        User loggedInUser = userRepository
-                .findByPhoneNumber(phoneNumber)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
-
-        boolean isAdmin =
-                loggedInUser.getRole() == Role.ROLE_ADMIN;
-
-        if (!isAdmin &&
-                !order.getUser().getId().equals(loggedInUser.getId())) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Access denied: You do not own this order");
-        }
-
-        if (order.getPaymentStatus() != PaymentStatus.PENDING) {
-            throw new RuntimeException("Payment already processed");
-        }
-
-        if (order.getRazorpayOrderId() != null) {
-            return order.getRazorpayOrderId();
-        }
-
-        RazorpayClient razorpayClient =
-                new RazorpayClient(keyId, keySecret);
-
-        JSONObject options = new JSONObject();
-
-        options.put("amount", (int) (order.getTotalAmount() * 100));
-        options.put("currency", "INR");
-        options.put("receipt", "order_rcptid_" + order.getId());
-
-        com.razorpay.Order razorpayOrder =
-                razorpayClient.orders.create(options);
-
-        String razorpayOrderId =
-                razorpayOrder.get("id").toString();
-
-        order.setRazorpayOrderId(razorpayOrderId);
-
-        PaymentTransaction transaction =
-                PaymentTransaction.builder()
-                        .order(order)
-                        .razorpayOrderId(razorpayOrderId)
-                        .paymentStatus(PaymentStatus.PENDING)
-                        .transactionTime(LocalDateTime.now())
-                        .build();
-
-        paymentTransactionRepository.save(transaction);
-
-        return razorpayOrderId;
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Online payment is currently disabled. Please select Cash on Delivery (COD)."
+        );
     }
 
     // =========================================================
@@ -157,7 +96,9 @@ public class PaymentService {
         }
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        verifyOrderOwnership(order);
 
         if (!order.getRazorpayOrderId().equals(razorpayOrderId)) {
             throw new RuntimeException("Razorpay Order ID mismatch");
@@ -256,19 +197,67 @@ public class PaymentService {
     public void markPaymentFailed(Long orderId) {
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        verifyOrderOwnership(order);
+
+        if (order.getPaymentMethod() == PaymentMethod.COD) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Payment failure cannot be processed for Cash on Delivery orders. Use order cancellation instead."
+            );
+        }
+
+        if (order.getOrderStatus() == OrderStatus.CANCELLED) {
+            return;
+        }
 
         order.setPaymentStatus(PaymentStatus.FAILED);
         order.setOrderStatus(OrderStatus.CANCELLED);
 
-        PaymentTransaction transaction =
-                paymentTransactionRepository
-                        .findByRazorpayOrderId(order.getRazorpayOrderId())
-                        .orElseThrow(() ->
-                                new RuntimeException("Transaction not found"));
+        if (order.getRazorpayOrderId() != null && !order.getRazorpayOrderId().isBlank()) {
+            paymentTransactionRepository
+                    .findByRazorpayOrderId(order.getRazorpayOrderId())
+                    .ifPresent(transaction -> {
+                        transaction.setPaymentStatus(PaymentStatus.FAILED);
+                        transaction.setTransactionTime(LocalDateTime.now());
+                    });
+        }
+    }
 
-        transaction.setPaymentStatus(PaymentStatus.FAILED);
-        transaction.setTransactionTime(LocalDateTime.now());
+    private void verifyOrderOwnership(Order order) {
+        if (order == null || order.getUser() == null || order.getUser().getId() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Access denied: Order ownership cannot be verified");
+        }
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "User is not authenticated");
+        }
+
+        String phoneNumber = auth.getName();
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "User is not authenticated");
+        }
+
+        User loggedInUser = userRepository
+                .findByPhoneNumber(phoneNumber)
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        boolean isAdmin = loggedInUser.getRole() == Role.ROLE_ADMIN;
+
+        if (!isAdmin && !order.getUser().getId().equals(loggedInUser.getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Access denied: You do not own this order");
+        }
     }
 
     // =========================================================
@@ -276,75 +265,10 @@ public class PaymentService {
     // =========================================================
     @Transactional
     public String initiatePhonePePayment(Long orderId, String backendBaseUrl) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-
-        if (order.getPaymentStatus() != PaymentStatus.PENDING) {
-            throw new RuntimeException("Payment already processed");
-        }
-
-        String merchantTransactionId = "TXN_ORDER_" + order.getId() + "_" + System.currentTimeMillis();
-        long amountInPaise = (long) (order.getTotalAmount() * 100);
-
-        String callbackUrl = backendBaseUrl + "/api/payments/phonepe/callback/" + order.getId();
-        if (backendBaseUrl.contains("localhost") || backendBaseUrl.contains("192.168.") || backendBaseUrl.contains("10.")) {
-            callbackUrl = "https://webhook.site/cb975c69-2a7e-407f-8e42-1678dc2f9976";
-        }
-        String redirectUrl = backendBaseUrl + "/api/payments/phonepe/callback/" + order.getId();
-
-        // Create Payload JSON
-        String payloadJson = String.format(
-            "{\"merchantId\":\"%s\",\"merchantTransactionId\":\"%s\",\"merchantUserId\":\"USER_%d\"," +
-            "\"amount\":%d,\"redirectUrl\":\"%s\",\"redirectMode\":\"GET\",\"callbackUrl\":\"%s\"," +
-            "\"paymentInstrument\":{\"type\":\"PAY_PAGE\"}}",
-            phonepeMerchantId, merchantTransactionId, order.getUser().getId(), amountInPaise, redirectUrl, callbackUrl
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Online payment is currently disabled. Please select Cash on Delivery (COD)."
         );
-
-        String base64Payload = Base64.getEncoder().encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8));
-        String verifyHeaderInput = base64Payload + "/pg/v1/pay" + phonepeSaltKey;
-        String sha256Hex = calculateSha256Hex(verifyHeaderInput);
-        String xVerify = sha256Hex + "###" + phonepeSaltIndex;
-
-        try {
-            HttpClient httpClient = HttpClient.newHttpClient();
-            String requestBody = String.format("{\"request\":\"%s\"}", base64Payload);
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(phonepeApiUrl + "/pg/v1/pay"))
-                    .header("Content-Type", "application/json")
-                    .header("X-VERIFY", xVerify)
-                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() == 200) {
-                JSONObject responseJson = new JSONObject(response.body());
-                if (responseJson.getBoolean("success")) {
-                    JSONObject data = responseJson.getJSONObject("data");
-                    String redirectPayUrl = data.getJSONObject("instrumentResponse")
-                            .getJSONObject("redirectInfo")
-                            .getString("url");
-
-                    // Set PhonePe txn ID in database
-                    order.setRazorpayOrderId("PHONEPE_" + merchantTransactionId);
-                    orderRepository.save(order);
-
-                    PaymentTransaction transaction = PaymentTransaction.builder()
-                            .order(order)
-                            .razorpayOrderId("PHONEPE_" + merchantTransactionId)
-                            .paymentStatus(PaymentStatus.PENDING)
-                            .transactionTime(LocalDateTime.now())
-                            .build();
-                    paymentTransactionRepository.save(transaction);
-
-                    return redirectPayUrl;
-                }
-            }
-            throw new RuntimeException("PhonePe payment initiation failed: " + response.body());
-        } catch (Exception e) {
-            throw new RuntimeException("Error initiating PhonePe payment: " + e.getMessage(), e);
-        }
     }
 
     // =========================================================
@@ -353,7 +277,9 @@ public class PaymentService {
     @Transactional
     public boolean verifyPhonePePayment(Long orderId, String merchantTransactionId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        verifyOrderOwnership(order);
 
         String dbPayId = order.getRazorpayOrderId();
         String expectedTxnId = (dbPayId != null && dbPayId.startsWith("PHONEPE_"))
