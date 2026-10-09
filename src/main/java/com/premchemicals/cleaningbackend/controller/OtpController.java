@@ -23,18 +23,24 @@ public class OtpController {
     // =========================================
     @PostMapping("/send")
     public ResponseEntity<?> sendOtp(@RequestParam String phoneNumber) {
-        if (phoneNumber == null || !phoneNumber.trim().matches("^[6-9]\\d{9}$")) {
+        String rawPhone = phoneNumber != null ? phoneNumber.trim() : "";
+        String tenDigitPhone = rawPhone.replaceAll("[^0-9]", "");
+        if (tenDigitPhone.length() >= 10) {
+            tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
+        }
+
+        if (!tenDigitPhone.matches("^[6-9]\\d{9}$")) {
             return ResponseEntity.badRequest().body(Map.of("error", "Enter a valid 10-digit Indian mobile number"));
         }
 
-        String cleanPhone = phoneNumber.trim();
-        User user = userRepository.findByPhoneNumber(cleanPhone).orElse(null);
+        User user = userRepository.findByPhoneNumber(tenDigitPhone)
+                .orElseGet(() -> userRepository.findByPhoneNumber(rawPhone).orElse(null));
         if (user != null && !user.isActive() && !user.isDeletedByUser()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Your account has been suspended by administration. Please contact customer care for support."));
         }
 
         try {
-            otpService.sendOtp(phoneNumber);
+            otpService.sendOtp(tenDigitPhone);
             return ResponseEntity.ok(Map.of("message", "OTP sent successfully"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
@@ -50,7 +56,13 @@ public class OtpController {
             return ResponseEntity.badRequest().body(Map.of("error", "Phone number and OTP are required"));
         }
 
-        boolean isValid = otpService.verifyOtp(phoneNumber, otp);
+        String rawPhone = phoneNumber.trim();
+        String tenDigitPhone = rawPhone.replaceAll("[^0-9]", "");
+        if (tenDigitPhone.length() >= 10) {
+            tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
+        }
+
+        boolean isValid = otpService.verifyOtp(tenDigitPhone, otp) || otpService.verifyOtp(rawPhone, otp);
         if (isValid) {
             return ResponseEntity.ok(Map.of("message", "OTP verified successfully", "verified", true));
         } else {

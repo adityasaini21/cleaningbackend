@@ -92,8 +92,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
 
+                String dbRoleStr = user.getRole().name();
+                String primaryRole = dbRoleStr.startsWith("ROLE_") ? dbRoleStr : "ROLE_" + dbRoleStr;
+                String altRole = dbRoleStr.replace("ROLE_", "");
+
                 List<SimpleGrantedAuthority> authorities = List.of(
-                        new SimpleGrantedAuthority(user.getRole().name())
+                        new SimpleGrantedAuthority(primaryRole),
+                        new SimpleGrantedAuthority(altRole)
                 );
 
                 UsernamePasswordAuthenticationToken authToken =
