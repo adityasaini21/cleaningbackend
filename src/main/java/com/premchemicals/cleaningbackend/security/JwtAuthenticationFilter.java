@@ -98,7 +98,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
-                                phoneNumber,
+                                user.getPhoneNumber(),
                                 null,
                                 authorities
                         );

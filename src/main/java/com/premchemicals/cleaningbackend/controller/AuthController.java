@@ -273,6 +273,18 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("exists", exists));
     }
 
+    private User getAuthenticatedUser(Authentication authentication) {
+        String rawPhone = authentication.getName();
+        String tenDigitPhone = rawPhone != null ? rawPhone.replaceAll("[^0-9]", "") : "";
+        if (tenDigitPhone.length() >= 10) {
+            tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
+        }
+        return userRepository.findByPhoneNumber(tenDigitPhone)
+                .orElseGet(() -> userRepository.findByPhoneNumber(rawPhone)
+                        .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                                org.springframework.http.HttpStatus.NOT_FOUND, "User not found")));
+    }
+
     // =========================================
     // SAVE FCM TOKEN
     // =========================================
@@ -288,14 +300,7 @@ public class AuthController {
         String phoneNumber =
                 authentication.getName();
 
-        User user =
-                userRepository
-                        .findByPhoneNumber(phoneNumber)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "User not found"
-                                )
-                        );
+        User user = getAuthenticatedUser(authentication);
 
         if (request.getFcmToken() != null) {
 
@@ -315,10 +320,7 @@ public class AuthController {
     @GetMapping("/profile")
     @PreAuthorize("isAuthenticated()")
     public UserProfileDTO getProfile(Authentication authentication) {
-        String phoneNumber = authentication.getName();
-        User user = userRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "User not found"));
+        User user = getAuthenticatedUser(authentication);
 
         UserProfileDTO dto = new UserProfileDTO();
         dto.setFullName(user.getFullName());
@@ -340,10 +342,7 @@ public class AuthController {
             @RequestBody UserProfileDTO request,
             Authentication authentication
     ) {
-        String phoneNumber = authentication.getName();
-        User user = userRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "User not found"));
+        User user = getAuthenticatedUser(authentication);
 
         user.setFullName(request.getFullName().trim());
         user.setEmail(request.getEmail() != null ? request.getEmail().trim() : null);
@@ -366,10 +365,7 @@ public class AuthController {
             @RequestBody ChangePasswordRequestDTO request,
             Authentication authentication
     ) {
-        String phoneNumber = authentication.getName();
-        User user = userRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "User not found"));
+        User user = getAuthenticatedUser(authentication);
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new org.springframework.web.server.ResponseStatusException(
@@ -387,10 +383,7 @@ public class AuthController {
     @DeleteMapping("/delete-account")
     @PreAuthorize("isAuthenticated()")
     public String deleteAccount(Authentication authentication) {
-        String phoneNumber = authentication.getName();
-        User user = userRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "User not found"));
+        User user = getAuthenticatedUser(authentication);
 
         user.setActive(false);
         user.setDeletedByUser(true);

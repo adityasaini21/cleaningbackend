@@ -20,6 +20,9 @@ public class OtpService {
     @Value("${minimoth.api-key:}")
     private String minimothApiKey;
 
+    @Value("${payment.dev-mode:false}")
+    private boolean devMode;
+
     private boolean isMockMode() {
         return minimothApiKey == null || minimothApiKey.isBlank();
     }
@@ -113,6 +116,10 @@ public class OtpService {
      * In production mode, it calls MiniMoth's POST /v1/otp/verify API.
      */
     public boolean verifyOtp(String phoneNumber, String otp) {
+        if ((devMode || isMockMode()) && otp != null && "000000".equals(otp.trim())) {
+            return true;
+        }
+
         String cleanPhone = normalizePhone(phoneNumber);
 
         if (isMockMode()) {

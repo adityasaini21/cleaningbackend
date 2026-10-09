@@ -44,12 +44,19 @@ public class JwtUtil {
                 .next()
                 .getAuthority();
 
-        String fullName = userRepository.findByPhoneNumber(userDetails.getUsername())
+        String rawPhone = userDetails.getUsername();
+        String tenDigitPhone = rawPhone != null ? rawPhone.replaceAll("[^0-9]", "") : "";
+        if (tenDigitPhone.length() >= 10) {
+            tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
+        }
+        String canonicalPhone = tenDigitPhone.isEmpty() ? rawPhone : tenDigitPhone;
+
+        String fullName = userRepository.findByPhoneNumber(canonicalPhone)
                 .map(com.premchemicals.cleaningbackend.model.User::getFullName)
                 .orElse("User");
 
         return Jwts.builder()
-                .setSubject(userDetails.getUsername())
+                .setSubject(canonicalPhone)
                 .claim("role", role)
                 .claim("fullName", fullName)
                 .setIssuedAt(new Date())
