@@ -65,7 +65,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (phoneNumber != null
                     && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                Optional<User> userOptional = userRepository.findByPhoneNumber(phoneNumber);
+                String tenDigitPhone = phoneNumber.replaceAll("[^0-9]", "");
+                if (tenDigitPhone.length() >= 10) {
+                    tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
+                }
+
+                Optional<User> userOptional = userRepository.findByPhoneNumber(tenDigitPhone);
+                if (userOptional.isEmpty()) {
+                    userOptional = userRepository.findByPhoneNumber(phoneNumber);
+                }
 
                 if (userOptional.isEmpty()) {
                     sendUnauthorizedError(response, "User account not found.");

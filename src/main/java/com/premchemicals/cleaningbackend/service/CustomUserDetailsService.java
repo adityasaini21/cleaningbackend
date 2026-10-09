@@ -16,10 +16,15 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String phoneNumber)
             throws UsernameNotFoundException {
 
-        User user = userRepository
-                .findByPhoneNumber(phoneNumber)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException("User not found"));
+        String tenDigitPhone = phoneNumber != null ? phoneNumber.replaceAll("[^0-9]", "") : "";
+        if (tenDigitPhone.length() >= 10) {
+            tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
+        }
+
+        String searchPhone = tenDigitPhone;
+        User user = userRepository.findByPhoneNumber(searchPhone)
+                .orElseGet(() -> userRepository.findByPhoneNumber(phoneNumber)
+                        .orElseThrow(() -> new UsernameNotFoundException("User not found")));
 
         return org.springframework.security.core.userdetails.User
                 .builder()

@@ -137,12 +137,18 @@ public class AuthController {
             @RequestBody LoginRequestDTO request
     ) {
 
+        String rawPhone = request.getPhoneNumber().trim();
+        String tenDigitPhone = rawPhone.replaceAll("[^0-9]", "");
+        if (tenDigitPhone.length() >= 10) {
+            tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
+        }
+
         Authentication authentication =
                 authenticationManager.authenticate(
 
                         new UsernamePasswordAuthenticationToken(
 
-                                request.getPhoneNumber().trim(),
+                                tenDigitPhone,
 
                                 request.getPassword()
                         )
@@ -178,17 +184,25 @@ public class AuthController {
     // =========================================
     @PostMapping("/otp/login")
     public ResponseEntity<?> loginOrRegisterWithOtp(@Valid @RequestBody OtpLoginRequestDTO request) {
-        String phone = request.getPhoneNumber().trim();
+        String rawPhone = request.getPhoneNumber().trim();
         String otp = request.getOtp().trim();
 
         // 1. Verify OTP first
-        boolean isOtpValid = otpService.verifyOtp(phone, otp);
+        boolean isOtpValid = otpService.verifyOtp(rawPhone, otp);
         if (!isOtpValid) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid or expired OTP"));
         }
 
+        String tenDigitPhone = rawPhone.replaceAll("[^0-9]", "");
+        if (tenDigitPhone.length() >= 10) {
+            tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
+        }
+
+        String phone = tenDigitPhone;
+
         // 2. Check if user exists by phone
-        User user = userRepository.findByPhoneNumber(phone).orElse(null);
+        User user = userRepository.findByPhoneNumber(phone)
+                .orElseGet(() -> userRepository.findByPhoneNumber(rawPhone).orElse(null));
         boolean isNewUser = false;
 
         if (user != null && !user.isActive() && !user.isDeletedByUser()) {
@@ -243,7 +257,14 @@ public class AuthController {
     // =========================================
     @GetMapping("/check-phone")
     public ResponseEntity<?> checkPhoneExists(@RequestParam String phoneNumber) {
-        User user = userRepository.findByPhoneNumber(phoneNumber.trim()).orElse(null);
+        String rawPhone = phoneNumber.trim();
+        String tenDigitPhone = rawPhone.replaceAll("[^0-9]", "");
+        if (tenDigitPhone.length() >= 10) {
+            tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
+        }
+
+        User user = userRepository.findByPhoneNumber(tenDigitPhone)
+                .orElseGet(() -> userRepository.findByPhoneNumber(rawPhone).orElse(null));
         if (user != null && !user.isActive() && !user.isDeletedByUser()) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Your account has been suspended by administration. Please contact customer care for support."));
