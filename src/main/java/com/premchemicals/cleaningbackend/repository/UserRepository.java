@@ -30,8 +30,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
 SELECT u
 FROM User u
-WHERE u.role = :role
-AND (
+WHERE (
 LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))
 OR
 u.phoneNumber LIKE CONCAT('%', :query, '%')
@@ -39,7 +38,6 @@ u.phoneNumber LIKE CONCAT('%', :query, '%')
 ORDER BY u.fullName
 """)
     List<User> searchUsers(
-            @Param("role") Role role,
             @Param("query") String query
     );
 
@@ -47,4 +45,14 @@ ORDER BY u.fullName
     @Transactional
     @Query(value = "ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_by_user boolean DEFAULT false", nativeQuery = true)
     void addDeletedByUserColumnIfNotExists();
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE users SET active = true WHERE active IS NULL", nativeQuery = true)
+    void fixNullActiveUsers();
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE users SET active = true WHERE role = 'ROLE_ADMIN'", nativeQuery = true)
+    void ensureAdminsAreActive();
 }

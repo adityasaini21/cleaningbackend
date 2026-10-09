@@ -22,10 +22,7 @@ public class AdminUserService {
     private final PasswordEncoder passwordEncoder;
 
     public List<UserResponseDTO> searchUsers(String query) {
-        List<User> users = userRepository.searchUsers(
-                Role.ROLE_USER,
-                query
-        );
+        List<User> users = userRepository.searchUsers(query);
 
         // Auto-migrate legacy deleted users to deletedByUser = true
         for (User u : users) {

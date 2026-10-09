@@ -40,6 +40,8 @@ public class AdminInitializer implements CommandLineRunner {
 
         try {
             userRepository.addDeletedByUserColumnIfNotExists();
+            userRepository.fixNullActiveUsers();
+            userRepository.ensureAdminsAreActive();
         } catch (Exception e) {
             System.err.println("Column migration note: " + e.getMessage());
         }
