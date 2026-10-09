@@ -27,9 +27,21 @@ public class AdminInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        try {
+            userRepository.addDeletedByUserColumnIfNotExists();
+            userRepository.fixNullActiveUsers();
+            userRepository.fixInactiveNonDeletedUsers();
+            userRepository.ensureAdminsAreActive();
+            System.out.println("======================================");
+            System.out.println("DATABASE USER ACTIVE STATES MIGRATED & ACTIVATED");
+            System.out.println("======================================");
+        } catch (Exception e) {
+            System.err.println("Column migration note: " + e.getMessage());
+        }
+
         if (adminPhone == null || adminPhone.trim().isEmpty() || !adminPhone.trim().matches("^[6-9]\\d{9}$")) {
             System.out.println("======================================");
-            System.out.println("ADMIN_PHONE NOT CONFIGURED OR INVALID - SKIPPING INITIALIZER");
+            System.out.println("ADMIN_PHONE NOT CONFIGURED OR INVALID - SKIPPING ADMIN ACCOUNT CREATION");
             System.out.println("======================================");
             return;
         }
@@ -37,15 +49,6 @@ public class AdminInitializer implements CommandLineRunner {
         String cleanPhone = adminPhone.trim();
         String pass = (adminPassword != null && !adminPassword.isBlank()) ? adminPassword.trim() : "admin123";
         String name = (adminFullName != null && !adminFullName.isBlank()) ? adminFullName.trim() : "Admin User";
-
-        try {
-            userRepository.addDeletedByUserColumnIfNotExists();
-            userRepository.fixNullActiveUsers();
-            userRepository.fixInactiveNonDeletedUsers();
-            userRepository.ensureAdminsAreActive();
-        } catch (Exception e) {
-            System.err.println("Column migration note: " + e.getMessage());
-        }
 
         try {
             User admin = userRepository.findByPhoneNumber(cleanPhone).orElse(null);
