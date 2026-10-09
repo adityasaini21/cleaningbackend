@@ -83,8 +83,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 User user = userOptional.get();
 
                 if (!user.isActive()) {
-                    sendUnauthorizedError(response, "Account is deactivated.");
-                    return;
+                    if (!user.isDeletedByUser()) {
+                        user.setActive(true);
+                        userRepository.save(user);
+                    } else {
+                        sendUnauthorizedError(response, "Account is deactivated.");
+                        return;
+                    }
                 }
 
                 if (user.getRole() == null) {

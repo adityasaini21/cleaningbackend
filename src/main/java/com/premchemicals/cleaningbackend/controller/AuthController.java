@@ -205,11 +205,6 @@ public class AuthController {
                 .orElseGet(() -> userRepository.findByPhoneNumber(rawPhone).orElse(null));
         boolean isNewUser = false;
 
-        if (user != null && !user.isActive() && !user.isDeletedByUser()) {
-            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Your account has been suspended by administration. Please contact customer care for support."));
-        }
-
         if (user == null) {
             // User does not exist, so register them!
             String name = request.getFullName();
@@ -230,15 +225,17 @@ public class AuthController {
 
             userRepository.save(user);
             isNewUser = true;
-        } else if (!user.isActive() && user.isDeletedByUser()) {
-            // Previously user-deleted account logging back in: Reactivate as a fresh user!
-            if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
-                user.setFullName(request.getFullName().trim());
+        } else {
+            // Existing user verified OTP: ensure active state and cleared deletion flag
+            if (!user.isActive() || user.isDeletedByUser()) {
+                if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+                    user.setFullName(request.getFullName().trim());
+                }
+                user.setActive(true);
+                user.setDeletedByUser(false);
+                userRepository.save(user);
+                isNewUser = true;
             }
-            user.setActive(true);
-            user.setDeletedByUser(false);
-            userRepository.save(user);
-            isNewUser = true;
         }
 
         // 3. Generate JWT Token
