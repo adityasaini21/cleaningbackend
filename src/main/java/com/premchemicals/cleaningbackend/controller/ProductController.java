@@ -19,7 +19,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ProductController {
 
     private final ProductService productService;
@@ -110,10 +109,21 @@ public class ProductController {
     }
 
     // =========================================
-    // 🔐 PAGINATION - ADMIN ONLY
+    // 🔐 TOGGLE PRODUCT STATUS - ADMIN ONLY
+    // =========================================
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ProductResponseDTO updateProductStatus(
+            @PathVariable Long id,
+            @RequestParam boolean active) {
+
+        return productService.setProductStatus(id, active);
+    }
+
+    // =========================================
+    // ✅ PAGINATION - PUBLIC / CUSTOMER ACCESS
     // =========================================
     @GetMapping("/paged")
-    @PreAuthorize("hasRole('ADMIN')")
     public Page<ProductResponseDTO> getAllProductsPaged(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,

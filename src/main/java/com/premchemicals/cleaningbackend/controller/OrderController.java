@@ -34,9 +34,11 @@ public class OrderController {
     @PreAuthorize("isAuthenticated()")
     public java.util.Map<String, Object> getDeliveryCharge(
             @RequestParam String address,
-            @RequestParam String pincode
+            @RequestParam String pincode,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude
     ) {
-        return orderService.getDeliveryChargeAndDistance(address, pincode);
+        return orderService.getDeliveryChargeAndDistance(address, pincode, latitude, longitude);
     }
 
     @PostMapping

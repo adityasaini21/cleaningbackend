@@ -19,7 +19,7 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret:${JWT_SECRET:cleaning_backend_super_secret_key_2026_secure_application_987654321}}")
+    @Value("${jwt.secret:${JWT_SECRET:}}")
     private String secret;
 
     @Value("${jwt.expiration:${JWT_EXPIRATION:15552000000}}")
@@ -32,7 +32,12 @@ public class JwtUtil {
 
     @PostConstruct
     public void init() {
-        // Ensure proper encoding
+        if (secret == null || secret.isBlank() || secret.trim().length() < 32) {
+            throw new IllegalStateException(
+                "FATAL CONFIGURATION ERROR: JWT_SECRET environment variable is missing, empty, or shorter than 32 characters. " +
+                "Application cannot start securely. Please set a valid JWT_SECRET (>= 32 characters) in your environment variables."
+            );
+        }
         key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -51,9 +56,9 @@ public class JwtUtil {
         }
         String canonicalPhone = tenDigitPhone.isEmpty() ? rawPhone : tenDigitPhone;
 
-        String fullName = userRepository.findByPhoneNumber(canonicalPhone)
+        String fullName = (userRepository != null) ? userRepository.findByPhoneNumber(canonicalPhone)
                 .map(com.premchemicals.cleaningbackend.model.User::getFullName)
-                .orElse("User");
+                .orElse("User") : "User";
 
         return Jwts.builder()
                 .setSubject(canonicalPhone)
@@ -78,6 +83,11 @@ public class JwtUtil {
     // ✅ Extract Expiration
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
+    }
+
+    // ✅ Extract IssuedAt
+    public Date extractIssuedAt(String token) {
+        return extractClaim(token, Claims::getIssuedAt);
     }
 
     // ✅ Generic Claim Extractor

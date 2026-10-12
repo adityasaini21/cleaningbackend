@@ -37,13 +37,13 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Pattern(
-            regexp = "^[6-9]\\d{9}$",
+            regexp = "^([6-9]\\d{9}|DELETED_.*)$",
             message = "Enter a valid 10-digit Indian mobile number"
     )
     @Column(
             nullable = false,
             unique = true,
-            length = 10
+            length = 50
     )
     private String phoneNumber;
 
@@ -55,6 +55,9 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+    @Column(name = "password_changed_at")
+    private LocalDateTime passwordChangedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

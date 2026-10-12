@@ -24,8 +24,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.premchemicals.cleaningbackend.repository.ReviewRepository;
 
-
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -71,35 +73,15 @@ public class ProductService {
                     .findAllActiveWithCategory();
         }
 
+        List<Long> productIds = products.stream().map(Product::getId).toList();
+        Map<Long, RatingStats> statsMap = getRatingStatsMap(productIds);
+
         return products.stream()
                 .map(product -> {
-
-                    ProductResponseDTO dto =
-                            ProductMapper.toDTO(product);
-
-                    dto.setAverageRating(
-
-                            reviewRepository
-                                    .getAverageRating(
-                                            product.getId()
-                                    ) == null
-
-                                    ? 0.0
-
-                                    : reviewRepository
-                                    .getAverageRating(
-                                            product.getId()
-                                    )
-                    );
-
-                    dto.setReviewCount(
-
-                            reviewRepository
-                                    .getReviewCount(
-                                            product.getId()
-                                    )
-                    );
-
+                    ProductResponseDTO dto = ProductMapper.toDTO(product);
+                    RatingStats stats = statsMap.get(product.getId());
+                    dto.setAverageRating(stats != null ? stats.averageRating : 0.0);
+                    dto.setReviewCount(stats != null ? stats.reviewCount : 0L);
                     return dto;
                 })
                 .toList();
@@ -112,38 +94,17 @@ public class ProductService {
             Pageable pageable
     ) {
 
-        return productRepository
-                .findActiveProductsWithCategory(pageable)
-                .map(product -> {
+        Page<Product> page = productRepository.findActiveProductsWithCategory(pageable);
+        List<Long> productIds = page.getContent().stream().map(Product::getId).toList();
+        Map<Long, RatingStats> statsMap = getRatingStatsMap(productIds);
 
-                    ProductResponseDTO dto =
-                            ProductMapper.toDTO(product);
-
-                    dto.setAverageRating(
-
-                            reviewRepository
-                                    .getAverageRating(
-                                            product.getId()
-                                    ) == null
-
-                                    ? 0.0
-
-                                    : reviewRepository
-                                    .getAverageRating(
-                                            product.getId()
-                                    )
-                    );
-
-                    dto.setReviewCount(
-
-                            reviewRepository
-                                    .getReviewCount(
-                                            product.getId()
-                                    )
-                    );
-
-                    return dto;
-                });
+        return page.map(product -> {
+            ProductResponseDTO dto = ProductMapper.toDTO(product);
+            RatingStats stats = statsMap.get(product.getId());
+            dto.setAverageRating(stats != null ? stats.averageRating : 0.0);
+            dto.setReviewCount(stats != null ? stats.reviewCount : 0L);
+            return dto;
+        });
     }
 
     // =========================================
@@ -281,37 +242,16 @@ public class ProductService {
     // =========================================
     public List<ProductResponseDTO> getDeletedProducts() {
 
-        return productRepository
-                .findDeletedProducts()
-                .stream()
+        List<Product> products = productRepository.findDeletedProducts();
+        List<Long> productIds = products.stream().map(Product::getId).toList();
+        Map<Long, RatingStats> statsMap = getRatingStatsMap(productIds);
+
+        return products.stream()
                 .map(product -> {
-
-                    ProductResponseDTO dto =
-                            ProductMapper.toDTO(product);
-
-                    dto.setAverageRating(
-
-                            reviewRepository
-                                    .getAverageRating(
-                                            product.getId()
-                                    ) == null
-
-                                    ? 0.0
-
-                                    : reviewRepository
-                                    .getAverageRating(
-                                            product.getId()
-                                    )
-                    );
-
-                    dto.setReviewCount(
-
-                            reviewRepository
-                                    .getReviewCount(
-                                            product.getId()
-                                    )
-                    );
-
+                    ProductResponseDTO dto = ProductMapper.toDTO(product);
+                    RatingStats stats = statsMap.get(product.getId());
+                    dto.setAverageRating(stats != null ? stats.averageRating : 0.0);
+                    dto.setReviewCount(stats != null ? stats.reviewCount : 0L);
                     return dto;
                 })
                 .toList();
@@ -347,6 +287,24 @@ public class ProductService {
     }
 
     // =========================================
+    // 🔄 UPDATE PRODUCT STATUS (ACTIVATE / DEACTIVATE)
+    // =========================================
+    @Transactional
+    public ProductResponseDTO setProductStatus(Long id, boolean active) {
+        Product product = productRepository.findAnyById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Product not found"
+                ));
+
+        product.setActive(active);
+        Product savedProduct = productRepository.save(product);
+        if (savedProduct.getCategory() != null) {
+            savedProduct.getCategory().getName();
+        }
+        return ProductMapper.toDTO(savedProduct);
+    }
+
+    // =========================================
     // ⚠ LOW STOCK ALERT SYSTEM
     // =========================================
     private static final int
@@ -355,39 +313,19 @@ public class ProductService {
     public List<ProductResponseDTO>
     getLowStockProducts() {
 
-        return productRepository
+        List<Product> products = productRepository
                 .findByStockLessThanEqualAndActiveTrue(
                         DEFAULT_LOW_STOCK_THRESHOLD
-                )
-                .stream()
+                );
+        List<Long> productIds = products.stream().map(Product::getId).toList();
+        Map<Long, RatingStats> statsMap = getRatingStatsMap(productIds);
+
+        return products.stream()
                 .map(product -> {
-
-                    ProductResponseDTO dto =
-                            ProductMapper.toDTO(product);
-
-                    dto.setAverageRating(
-
-                            reviewRepository
-                                    .getAverageRating(
-                                            product.getId()
-                                    ) == null
-
-                                    ? 0.0
-
-                                    : reviewRepository
-                                    .getAverageRating(
-                                            product.getId()
-                                    )
-                    );
-
-                    dto.setReviewCount(
-
-                            reviewRepository
-                                    .getReviewCount(
-                                            product.getId()
-                                    )
-                    );
-
+                    ProductResponseDTO dto = ProductMapper.toDTO(product);
+                    RatingStats stats = statsMap.get(product.getId());
+                    dto.setAverageRating(stats != null ? stats.averageRating : 0.0);
+                    dto.setReviewCount(stats != null ? stats.reviewCount : 0L);
                     return dto;
                 })
                 .toList();
@@ -399,5 +337,32 @@ public class ProductService {
                 .countByStockLessThanEqualAndActiveTrue(
                         DEFAULT_LOW_STOCK_THRESHOLD
                 );
+    }
+
+    private Map<Long, RatingStats> getRatingStatsMap(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Object[]> rows = reviewRepository.getRatingStatsForProductIds(productIds);
+        Map<Long, RatingStats> map = new HashMap<>();
+        for (Object[] row : rows) {
+            if (row != null && row.length >= 3 && row[0] != null) {
+                Long productId = ((Number) row[0]).longValue();
+                Double avgRating = row[1] != null ? ((Number) row[1]).doubleValue() : 0.0;
+                Long count = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+                map.put(productId, new RatingStats(avgRating, count));
+            }
+        }
+        return map;
+    }
+
+    private static class RatingStats {
+        final Double averageRating;
+        final Long reviewCount;
+
+        RatingStats(Double averageRating, Long reviewCount) {
+            this.averageRating = averageRating;
+            this.reviewCount = reviewCount;
+        }
     }
 }

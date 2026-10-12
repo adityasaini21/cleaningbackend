@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 @Service
 public class GoogleMapsService {
 
-    @Value("${GOOGLE_MAPS_API_KEY:}")
+    @Value("${google.maps.api-key:${GOOGLE_MAPS_API_KEY:}}")
     private String apiKey;
 
     @Value("${store.latitude:26.4502508}")

@@ -25,6 +25,8 @@ public class ProductResponseDTO {
 
     private String categoryName;
 
+    private boolean active;
+
     // =========================================
     // REVIEWS
     // =========================================

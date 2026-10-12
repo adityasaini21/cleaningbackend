@@ -23,6 +23,32 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByPhoneNumber(String phoneNumber);
 
+    @Query("""
+SELECT u
+FROM User u
+WHERE u.phoneNumber = :tenDigit
+   OR u.phoneNumber = CONCAT('+91', :tenDigit)
+   OR u.phoneNumber = CONCAT('91', :tenDigit)
+   OR u.phoneNumber = :rawPhone
+""")
+    Optional<User> findByCanonicalPhone(
+            @Param("tenDigit") String tenDigit,
+            @Param("rawPhone") String rawPhone
+    );
+
+    @Query("""
+SELECT (count(u) > 0)
+FROM User u
+WHERE u.phoneNumber = :tenDigit
+   OR u.phoneNumber = CONCAT('+91', :tenDigit)
+   OR u.phoneNumber = CONCAT('91', :tenDigit)
+   OR u.phoneNumber = :rawPhone
+""")
+    boolean existsByCanonicalPhone(
+            @Param("tenDigit") String tenDigit,
+            @Param("rawPhone") String rawPhone
+    );
+
     List<User> findByRole(Role role);
 
     Page<User> findByRole(Role role, Pageable pageable);
@@ -51,13 +77,19 @@ ORDER BY u.fullName
     @Query(value = "UPDATE users SET active = true WHERE active IS NULL", nativeQuery = true)
     void fixNullActiveUsers();
 
-    @Modifying
-    @Transactional
-    @Query(value = "UPDATE users SET active = true WHERE (active IS FALSE OR active IS NULL) AND (deleted_by_user IS FALSE OR deleted_by_user IS NULL)", nativeQuery = true)
-    void fixInactiveNonDeletedUsers();
 
     @Modifying
     @Transactional
     @Query(value = "UPDATE users SET active = true WHERE role = 'ROLE_ADMIN'", nativeQuery = true)
     void ensureAdminsAreActive();
+
+    @Modifying
+    @Transactional
+    @Query(value = "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP", nativeQuery = true)
+    void addPasswordChangedAtColumnIfNotExists();
+
+    @Modifying
+    @Transactional
+    @Query(value = "ALTER TABLE users ALTER COLUMN phone_number TYPE VARCHAR(50)", nativeQuery = true)
+    void widenPhoneNumberColumn();
 }

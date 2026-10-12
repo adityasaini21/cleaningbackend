@@ -32,7 +32,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.premchemicals.cleaningbackend.security.RateLimitingFilter;
 
@@ -84,8 +86,6 @@ public class SecurityConfig {
 
                                 "/auth/register",
 
-                                "/auth/google/**",
-
                                 "/auth/otp/**",
 
                                 "/auth/check-phone",
@@ -113,18 +113,18 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // =====================================
-                        // PRODUCT APIs (AUTHENTICATED)
+                        // PRODUCT & CATEGORY APIs (PUBLIC READ)
                         // =====================================
 
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/products/**"
-                        ).authenticated()
+                        ).permitAll()
 
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/categories/**"
-                        ).authenticated()
+                        ).permitAll()
 
                         // =====================================
                         // PINCODE
@@ -172,11 +172,12 @@ public class SecurityConfig {
                         ).permitAll()
 
                                 // =====================================
-// ADMIN APIs
-// =====================================
+                                // ADMIN APIs
+                                // =====================================
 
                                 .requestMatchers(
-                                        "/admin/**"
+                                        "/admin/**",
+                                        "/api/admin/**"
                                 ).hasAnyAuthority("ROLE_ADMIN", "ADMIN")
 
                         // =====================================
@@ -202,7 +203,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+
+        List<String> origins = (allowedOrigins != null && !allowedOrigins.isEmpty())
+                ? allowedOrigins.stream().map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList())
+                : List.of("http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173");
+
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(
                 List.of(
                         "GET",
@@ -215,7 +221,9 @@ public class SecurityConfig {
                 )
         );
         configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

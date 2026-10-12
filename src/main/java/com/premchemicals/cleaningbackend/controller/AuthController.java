@@ -20,17 +20,15 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.access.prepost.PreAuthorize;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.premchemicals.cleaningbackend.dto.GoogleLoginRequestDTO;
-import com.premchemicals.cleaningbackend.dto.GoogleRegisterRequestDTO;
-import com.premchemicals.cleaningbackend.dto.GoogleLoginResponseDTO;
 import com.premchemicals.cleaningbackend.dto.OtpLoginRequestDTO;
 import com.premchemicals.cleaningbackend.dto.OtpLoginResponseDTO;
+import com.premchemicals.cleaningbackend.repository.NotificationRepository;
 import com.premchemicals.cleaningbackend.service.OtpService;
 import java.util.UUID;
 import java.util.Map;
-import com.premchemicals.cleaningbackend.service.GoogleAuthService;
 import jakarta.validation.Valid;
 
 @RestController
@@ -46,11 +44,12 @@ public class AuthController {
 
     private final PasswordEncoder passwordEncoder;
 
-    private final GoogleAuthService googleAuthService;
-
     private final OtpService otpService;
 
     private final TokenBlacklistService tokenBlacklistService;
+
+    @Autowired(required = false)
+    private NotificationRepository notificationRepository;
 
     // =========================================
     // REGISTER CUSTOMER
@@ -61,17 +60,34 @@ public class AuthController {
             @RequestBody User request
     ) {
 
-        String phoneNumber =
-                request.getPhoneNumber().trim();
+        String rawPhone = request.getPhoneNumber().trim();
+        String tenDigitPhone = rawPhone.replaceAll("[^0-9]", "");
+        if (tenDigitPhone.length() >= 10) {
+            tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
+        }
+        String cleanPhone = tenDigitPhone.isEmpty() ? rawPhone : tenDigitPhone;
 
-        if (userRepository.existsByPhoneNumber(phoneNumber)) {
+        User existing = userRepository.findByCanonicalPhone(cleanPhone, rawPhone).orElse(null);
+        if (existing != null) {
+            if (!existing.isActive() && !existing.isDeletedByUser()) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "Account has been suspended by administration");
+            }
+            if (existing.isDeletedByUser()) {
+                existing.setPhoneNumber("DELETED_" + existing.getId() + "_" + System.currentTimeMillis());
+                userRepository.save(existing);
+            } else {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.BAD_REQUEST, "Phone number already registered");
+            }
+        } else if (userRepository.existsByCanonicalPhone(cleanPhone, rawPhone)) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST, "Phone number already registered");
         }
 
         User user = new User();
 
-        user.setPhoneNumber(phoneNumber);
+        user.setPhoneNumber(cleanPhone);
 
         user.setPassword(
                 passwordEncoder.encode(
@@ -164,22 +180,6 @@ public class AuthController {
     }
 
     // =========================================
-    // GOOGLE SIGN-IN LOGIN
-    // =========================================
-    @PostMapping("/google/login")
-    public GoogleLoginResponseDTO loginWithGoogle(@Valid @RequestBody GoogleLoginRequestDTO request) {
-        return googleAuthService.loginWithGoogle(request.getIdToken());
-    }
-
-    // =========================================
-    // GOOGLE SIGN-IN REGISTER
-    // =========================================
-    @PostMapping("/google/register")
-    public GoogleLoginResponseDTO registerWithGoogle(@Valid @RequestBody GoogleRegisterRequestDTO request) {
-        return googleAuthService.registerWithGoogle(request.getIdToken(), request.getPhoneNumber());
-    }
-
-    // =========================================
     // OTP PASSWORDLESS LOGIN & REGISTER
     // =========================================
     @PostMapping("/otp/login")
@@ -188,7 +188,13 @@ public class AuthController {
         String otp = request.getOtp().trim();
 
         // 1. Verify OTP first
-        boolean isOtpValid = otpService.verifyOtp(rawPhone, otp);
+        boolean isOtpValid;
+        try {
+            isOtpValid = otpService.verifyOtp(rawPhone, otp);
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode())
+                    .body(Map.of("error", e.getReason() != null ? e.getReason() : "OTP verification rejected"));
+        }
         if (!isOtpValid) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid or expired OTP"));
         }
@@ -201,12 +207,29 @@ public class AuthController {
         String phone = tenDigitPhone;
 
         // 2. Check if user exists by phone
-        User user = userRepository.findByPhoneNumber(phone)
-                .orElseGet(() -> userRepository.findByPhoneNumber(rawPhone).orElse(null));
+        User user = userRepository.findByCanonicalPhone(phone, rawPhone).orElse(null);
         boolean isNewUser = false;
 
+        if (user != null) {
+            // Existing user verified OTP
+            if (!user.isActive() && !user.isDeletedByUser()) {
+                return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Your account has been suspended by administration. Please contact customer care for support."));
+            }
+
+            // Deleted account: MUST NOT be reactivated or reused!
+            // Detach/anonymize the deleted record and treat returning registration as a fresh user.
+            if (user.isDeletedByUser()) {
+                user.setPhoneNumber("DELETED_" + user.getId() + "_" + System.currentTimeMillis());
+                user.setActive(false);
+                user.setPassword("[DELETED]");
+                userRepository.save(user);
+                user = null; // triggers brand new user creation below
+            }
+        }
+
         if (user == null) {
-            // User does not exist, so register them!
+            // User does not exist, so register them as a fresh user!
             String name = request.getFullName();
             if (name == null || name.trim().isEmpty()) {
                 name = "Customer"; // Fallback name
@@ -225,22 +248,11 @@ public class AuthController {
 
             userRepository.save(user);
             isNewUser = true;
-        } else {
-            // Existing user verified OTP: ensure active state and cleared deletion flag
-            if (!user.isActive() || user.isDeletedByUser()) {
-                if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
-                    user.setFullName(request.getFullName().trim());
-                }
-                user.setActive(true);
-                user.setDeletedByUser(false);
-                userRepository.save(user);
-                isNewUser = true;
-            }
         }
 
         // 3. Generate JWT Token
         UserDetails userDetails = org.springframework.security.core.userdetails.User.withUsername(user.getPhoneNumber())
-                .password(user.getPassword())
+                .password(user.getPassword() != null ? user.getPassword() : "")
                 .authorities(user.getRole().name())
                 .build();
 
@@ -260,13 +272,12 @@ public class AuthController {
             tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
         }
 
-        User user = userRepository.findByPhoneNumber(tenDigitPhone)
-                .orElseGet(() -> userRepository.findByPhoneNumber(rawPhone).orElse(null));
+        User user = userRepository.findByCanonicalPhone(tenDigitPhone, rawPhone).orElse(null);
         if (user != null && !user.isActive() && !user.isDeletedByUser()) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Your account has been suspended by administration. Please contact customer care for support."));
         }
-        boolean exists = (user != null && user.isActive());
+        boolean exists = (user != null && user.isActive() && !user.isDeletedByUser());
         return ResponseEntity.ok(Map.of("exists", exists));
     }
 
@@ -276,10 +287,9 @@ public class AuthController {
         if (tenDigitPhone.length() >= 10) {
             tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
         }
-        return userRepository.findByPhoneNumber(tenDigitPhone)
-                .orElseGet(() -> userRepository.findByPhoneNumber(rawPhone)
-                        .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                                org.springframework.http.HttpStatus.NOT_FOUND, "User not found")));
+        return userRepository.findByCanonicalPhone(tenDigitPhone, rawPhone)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "User not found"));
     }
 
     // =========================================
@@ -354,15 +364,20 @@ public class AuthController {
     }
 
     // =========================================
-    // CHANGE PASSWORD
+    // CHANGE PASSWORD (ADMIN ONLY)
     // =========================================
     @PutMapping("/change-password")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public String changePassword(
-            @RequestBody ChangePasswordRequestDTO request,
+            @Valid @RequestBody ChangePasswordRequestDTO request,
             Authentication authentication
     ) {
         User user = getAuthenticatedUser(authentication);
+
+        if (user.getRole() != Role.ROLE_ADMIN) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Only administrators can change passwords");
+        }
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new org.springframework.web.server.ResponseStatusException(
@@ -370,6 +385,7 @@ public class AuthController {
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setPasswordChangedAt(java.time.LocalDateTime.now());
         userRepository.save(user);
         return "Password changed successfully";
     }
@@ -379,19 +395,48 @@ public class AuthController {
     // =========================================
     @DeleteMapping("/delete-account")
     @PreAuthorize("isAuthenticated()")
-    public String deleteAccount(Authentication authentication) {
+    public String deleteAccount(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            Authentication authentication
+    ) {
         User user = getAuthenticatedUser(authentication);
 
+        // 1. Blacklist token immediately
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String jwt = authHeader.substring(7);
+            try {
+                java.util.Date expiration = jwtUtil.extractExpiration(jwt);
+                tokenBlacklistService.blacklistToken(jwt, expiration.getTime());
+            } catch (Exception e) {
+                // Token parsing failed, continue
+            }
+        }
+
+        // 2. Set passwordChangedAt to invalidate any active sessions
+        user.setPasswordChangedAt(java.time.LocalDateTime.now());
+
+        // 3. Clear ephemeral user notifications
+        if (notificationRepository != null) {
+            try {
+                notificationRepository.deleteByUser(user);
+            } catch (Exception e) {
+                // Ignore if notifications repo fails
+            }
+        }
+
+        // 4. Anonymize user details and detach phone number
         user.setActive(false);
         user.setDeletedByUser(true);
-        // Clear sensitive address details and tokens, but preserve fullName, phoneNumber & email for Admin records
+        user.setFullName("Deleted User");
         user.setAddress(null);
         user.setCity(null);
         user.setState(null);
         user.setPincode(null);
         user.setLandmark(null);
         user.setFcmToken(null);
+        user.setEmail(null);
         user.setPassword("[DELETED]");
+        user.setPhoneNumber("DELETED_" + user.getId() + "_" + System.currentTimeMillis());
 
         userRepository.save(user);
         return "Account deactivated and user data cleared successfully";

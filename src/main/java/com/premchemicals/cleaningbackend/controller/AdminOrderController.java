@@ -78,12 +78,4 @@ public class AdminOrderController {
     ) {
         return orderService.updateOrderStatus(orderId, status);
     }
-
-    // =========================================
-    // 🗑️ CLEAR ALL ORDER HISTORY
-    // =========================================
-    @DeleteMapping("/clear-all")
-    public void clearAllOrders() {
-        orderService.deleteAllOrders();
-    }
 }

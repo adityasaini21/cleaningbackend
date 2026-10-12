@@ -1,66 +1,199 @@
 package com.premchemicals.cleaningbackend;
 
+import com.premchemicals.cleaningbackend.controller.OrderController;
+import com.premchemicals.cleaningbackend.dto.*;
+import com.premchemicals.cleaningbackend.model.*;
+import com.premchemicals.cleaningbackend.model.enums.*;
+import com.premchemicals.cleaningbackend.repository.*;
 import com.premchemicals.cleaningbackend.security.JwtUtil;
+import com.premchemicals.cleaningbackend.service.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.Collections;
+import java.util.*;
 
-@SpringBootTest
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 class CleaningbackendApplicationTests {
 
-    @Autowired
+    private OrderRepository orderRepository;
+    private OrderItemRepository orderItemRepository;
+    private PaymentTransactionRepository paymentTransactionRepository;
+    private ProductRepository productRepository;
+    private UserRepository userRepository;
+    private ProductService productService;
+    private DeliveryPincodeRepository deliveryPincodeRepository;
+    private NotificationService notificationService;
+    private GoogleMapsService googleMapsService;
+    private DeliveryPincodeService deliveryPincodeService;
+    private PaymentService paymentService;
+
+    private OrderService orderService;
+    private OrderController orderController;
     private JwtUtil jwtUtil;
 
+    @BeforeEach
+    void setUp() {
+        orderRepository = mock(OrderRepository.class);
+        orderItemRepository = mock(OrderItemRepository.class);
+        paymentTransactionRepository = mock(PaymentTransactionRepository.class);
+        productRepository = mock(ProductRepository.class);
+        userRepository = mock(UserRepository.class);
+        productService = mock(ProductService.class);
+        deliveryPincodeRepository = mock(DeliveryPincodeRepository.class);
+        notificationService = mock(NotificationService.class);
+        googleMapsService = mock(GoogleMapsService.class);
+        deliveryPincodeService = mock(DeliveryPincodeService.class);
+        paymentService = mock(PaymentService.class);
+
+        orderService = new OrderService(
+                orderRepository,
+                orderItemRepository,
+                paymentTransactionRepository,
+                productRepository,
+                userRepository,
+                productService,
+                deliveryPincodeRepository,
+                notificationService,
+                googleMapsService,
+                deliveryPincodeService
+        );
+
+        orderController = new OrderController(orderService, paymentService);
+
+        jwtUtil = new JwtUtil();
+        ReflectionTestUtils.setField(jwtUtil, "secret", "cleaning_backend_super_secret_key_2026_secure_application_987654321");
+        ReflectionTestUtils.setField(jwtUtil, "jwtExpiration", 15552000000L);
+        jwtUtil.init();
+
+        // Default: delivery pincode deliverable
+        when(deliveryPincodeService.isDeliverable(anyString())).thenReturn(true);
+
+        // Authenticate mock user in SecurityContext
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("9795328275", null, List.of(() -> "ROLE_USER"))
+        );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
-    void testLiveCheckoutAPI() {
-        try {
-            // Generate a valid JWT token for the user
-            String token = jwtUtil.generateToken(new User(
-                    "9795328275",
-                    "",
-                    Collections.singletonList(() -> "ROLE_USER")
-            ));
+    @DisplayName("Verify Local Checkout Flow: Order Placement & Amount Calculation")
+    void testLocalCheckoutOrderPlacement() {
+        User user = User.builder()
+                .id(1L)
+                .phoneNumber("9795328275")
+                .fullName("Test Customer")
+                .role(Role.ROLE_USER)
+                .active(true)
+                .build();
+        when(userRepository.findByPhoneNumber("9795328275")).thenReturn(Optional.of(user));
 
-            System.out.println("🔥 Generated JWT Token: " + token);
+        Product product = new Product();
+        product.setId(1L);
+        product.setName("Floor Cleaner 5L");
+        product.setPrice(100.0);
+        product.setActive(true);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
 
-            // Construct checkout payload JSON
-            String jsonPayload = "{" +
-                    "  \"shippingAddress\": \"123 Swarup Nagar, Kanpur\"," +
-                    "  \"phoneNumber\": \"9795328275\"," +
-                    "  \"pincode\": \"208002\"," +
-                    "  \"paymentMethod\": \"ONLINE\"," +
-                    "  \"items\": [" +
-                    "    {" +
-                    "      \"productId\": 1," +
-                    "      \"quantity\": 3" +
-                    "    }" +
-                    "  ]" +
-                    "}";
+        when(googleMapsService.getCoordinatesFromAddress(any(), any())).thenReturn(new double[]{26.45, 80.29});
+        when(googleMapsService.getRoadDistanceInMeters(anyDouble(), anyDouble())).thenReturn(2500.0); // <= 5km -> ₹49 delivery
 
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://cleaningbackend-production-cf45.up.railway.app/api/orders"))
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + token)
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                    .build();
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order o = invocation.getArgument(0);
+            ReflectionTestUtils.setField(o, "id", 101L);
+            return o;
+        });
 
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        OrderRequestDTO request = new OrderRequestDTO();
+        request.setShippingAddress("123 Swarup Nagar, Kanpur");
+        request.setPhoneNumber("9795328275");
+        request.setPincode("208002");
+        request.setPaymentMethod("COD");
 
-            System.out.println("==========================================");
-            System.out.println("🔥 STATUS CODE: " + response.statusCode());
-            System.out.println("🔥 RESPONSE BODY: " + response.body());
-            System.out.println("==========================================");
+        OrderRequestDTO.OrderItemRequest itemDto = new OrderRequestDTO.OrderItemRequest();
+        itemDto.setProductId(1L);
+        itemDto.setQuantity(3); // 3 * 100 = 300 >= 200 min order
+        request.setItems(List.of(itemDto));
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        OrderResponseDTO response = orderController.placeOrder(request);
+
+        assertNotNull(response);
+        assertEquals(101L, response.getOrderId());
+        assertEquals(349.0, response.getTotalAmount(), "Total amount must be item total (₹300) + delivery charge (₹49)");
+        assertEquals(OrderStatus.CONFIRMED, response.getOrderStatus());
+        verify(orderRepository, times(1)).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("Verify Checkout Rejects Inactive Products")
+    void testCheckoutRejectsInactiveProduct() {
+        User user = User.builder().id(1L).phoneNumber("9795328275").active(true).build();
+        when(userRepository.findByPhoneNumber("9795328275")).thenReturn(Optional.of(user));
+
+        Product inactiveProduct = new Product();
+        inactiveProduct.setId(2L);
+        inactiveProduct.setName("Discontinued Soap");
+        inactiveProduct.setPrice(150.0);
+        inactiveProduct.setActive(false);
+        when(productRepository.findById(2L)).thenReturn(Optional.of(inactiveProduct));
+
+        OrderRequestDTO request = new OrderRequestDTO();
+        request.setShippingAddress("123 Street");
+        request.setPhoneNumber("9795328275");
+        request.setPincode("208002");
+        request.setPaymentMethod("COD");
+
+        OrderRequestDTO.OrderItemRequest itemDto = new OrderRequestDTO.OrderItemRequest();
+        itemDto.setProductId(2L);
+        itemDto.setQuantity(2);
+        request.setItems(List.of(itemDto));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> orderService.placeOrder(request));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("currently unavailable"));
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("Verify Checkout Rejects Orders Below ₹200 Minimum Limit")
+    void testCheckoutRejectsSubMinimumOrder() {
+        User user = User.builder().id(1L).phoneNumber("9795328275").active(true).build();
+        when(userRepository.findByPhoneNumber("9795328275")).thenReturn(Optional.of(user));
+
+        Product product = new Product();
+        product.setId(3L);
+        product.setName("Small Brush");
+        product.setPrice(50.0);
+        product.setActive(true);
+        when(productRepository.findById(3L)).thenReturn(Optional.of(product));
+
+        OrderRequestDTO request = new OrderRequestDTO();
+        request.setShippingAddress("123 Street");
+        request.setPhoneNumber("9795328275");
+        request.setPincode("208002");
+        request.setPaymentMethod("COD");
+
+        OrderRequestDTO.OrderItemRequest itemDto = new OrderRequestDTO.OrderItemRequest();
+        itemDto.setProductId(3L);
+        itemDto.setQuantity(1); // 1 * 50 = 50 < 200
+        request.setItems(List.of(itemDto));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> orderService.placeOrder(request));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("Minimum order amount is ₹200.00"));
+        verify(orderRepository, never()).save(any(Order.class));
     }
 }

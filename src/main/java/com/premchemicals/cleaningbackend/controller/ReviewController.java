@@ -5,6 +5,7 @@ import com.premchemicals.cleaningbackend.dto.ReviewResponseDTO;
 import com.premchemicals.cleaningbackend.dto.ReviewSummaryDTO;
 import com.premchemicals.cleaningbackend.service.ReviewService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,7 +28,7 @@ public class ReviewController {
     @PreAuthorize("isAuthenticated()")
     public ReviewResponseDTO addReview(
 
-            @RequestBody
+            @Valid @RequestBody
             ReviewRequestDTO request
     ) {
 

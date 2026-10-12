@@ -49,6 +49,16 @@ public class ReviewServiceImpl
     public ReviewResponseDTO addReview(
             ReviewRequestDTO request) {
 
+        if (request == null || request.getProductId() == null) {
+            throw new IllegalArgumentException("Product ID is required");
+        }
+        if (request.getRating() == null || request.getRating() < 1 || request.getRating() > 5) {
+            throw new IllegalArgumentException("Rating must be between 1 and 5");
+        }
+        if (request.getComment() != null && request.getComment().length() > 1000) {
+            throw new IllegalArgumentException("Comment cannot exceed 1000 characters");
+        }
+
         Authentication authentication =
                 SecurityContextHolder
                         .getContext()
@@ -143,28 +153,29 @@ public class ReviewServiceImpl
 
         double averageRating =
                 reviews.stream()
+                        .filter(r -> r.getRating() != null)
                         .mapToInt(Review::getRating)
                         .average()
                         .orElse(0.0);
 
         int fiveStar = (int) reviews.stream()
-                .filter(r -> r.getRating() == 5)
+                .filter(r -> r.getRating() != null && r.getRating() == 5)
                 .count();
 
         int fourStar = (int) reviews.stream()
-                .filter(r -> r.getRating() == 4)
+                .filter(r -> r.getRating() != null && r.getRating() == 4)
                 .count();
 
         int threeStar = (int) reviews.stream()
-                .filter(r -> r.getRating() == 3)
+                .filter(r -> r.getRating() != null && r.getRating() == 3)
                 .count();
 
         int twoStar = (int) reviews.stream()
-                .filter(r -> r.getRating() == 2)
+                .filter(r -> r.getRating() != null && r.getRating() == 2)
                 .count();
 
         int oneStar = (int) reviews.stream()
-                .filter(r -> r.getRating() == 1)
+                .filter(r -> r.getRating() != null && r.getRating() == 1)
                 .count();
 
         List<ReviewResponseDTO> reviewDTOs =

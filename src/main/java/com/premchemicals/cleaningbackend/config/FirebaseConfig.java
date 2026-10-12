@@ -54,8 +54,7 @@ public class FirebaseConfig {
             }
 
         } catch (Exception e) {
-            System.err.println("Failed to initialize Firebase.");
-            e.printStackTrace();
+            System.err.println("Failed to initialize Firebase: " + e.getMessage());
         }
     }
 }

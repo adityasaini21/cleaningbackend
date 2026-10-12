@@ -18,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,7 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        if (path.equals("/auth/login") || path.equals("/auth/register") || path.startsWith("/auth/google/") || path.startsWith("/auth/otp/") || path.equals("/auth/check-phone")) {
+        if (path.equals("/auth/login") || path.equals("/auth/register") || path.startsWith("/auth/otp/") || path.equals("/auth/check-phone")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -83,11 +84,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 User user = userOptional.get();
 
                 if (!user.isActive()) {
-                    if (!user.isDeletedByUser()) {
-                        user.setActive(true);
-                        userRepository.save(user);
-                    } else {
-                        sendUnauthorizedError(response, "Account is deactivated.");
+                    sendUnauthorizedError(response, "Account is deactivated or suspended.");
+                    return;
+                }
+
+                if (user.getPasswordChangedAt() != null) {
+                    Date issuedAt = jwtUtil.extractIssuedAt(jwt);
+                    long passwordChangedEpochMs = user.getPasswordChangedAt()
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toInstant()
+                            .toEpochMilli();
+
+                    if (issuedAt == null || issuedAt.getTime() <= passwordChangedEpochMs) {
+                        sendUnauthorizedError(response, "Session has been invalidated due to password change. Please login again.");
                         return;
                     }
                 }

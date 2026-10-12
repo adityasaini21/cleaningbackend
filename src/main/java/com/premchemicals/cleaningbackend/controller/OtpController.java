@@ -33,8 +33,7 @@ public class OtpController {
             return ResponseEntity.badRequest().body(Map.of("error", "Enter a valid 10-digit Indian mobile number"));
         }
 
-        User user = userRepository.findByPhoneNumber(tenDigitPhone)
-                .orElseGet(() -> userRepository.findByPhoneNumber(rawPhone).orElse(null));
+        User user = userRepository.findByCanonicalPhone(tenDigitPhone, rawPhone).orElse(null);
         if (user != null && !user.isActive() && !user.isDeletedByUser()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Your account has been suspended by administration. Please contact customer care for support."));
         }
@@ -42,8 +41,10 @@ public class OtpController {
         try {
             otpService.sendOtp(tenDigitPhone);
             return ResponseEntity.ok(Map.of("message", "OTP sent successfully"));
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason() != null ? e.getReason() : "OTP request rejected"));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.internalServerError().body(Map.of("error", "Failed to send OTP. Please try again later."));
         }
     }
 
@@ -57,16 +58,16 @@ public class OtpController {
         }
 
         String rawPhone = phoneNumber.trim();
-        String tenDigitPhone = rawPhone.replaceAll("[^0-9]", "");
-        if (tenDigitPhone.length() >= 10) {
-            tenDigitPhone = tenDigitPhone.substring(tenDigitPhone.length() - 10);
-        }
-
-        boolean isValid = otpService.verifyOtp(tenDigitPhone, otp) || otpService.verifyOtp(rawPhone, otp);
-        if (isValid) {
-            return ResponseEntity.ok(Map.of("message", "OTP verified successfully", "verified", true));
-        } else {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid or expired OTP", "verified", false));
+        try {
+            boolean isValid = otpService.verifyOtp(rawPhone, otp);
+            if (isValid) {
+                return ResponseEntity.ok(Map.of("message", "OTP verified successfully", "verified", true));
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid or expired OTP", "verified", false));
+            }
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode())
+                    .body(Map.of("error", e.getReason() != null ? e.getReason() : "OTP verification rejected", "verified", false));
         }
     }
 }

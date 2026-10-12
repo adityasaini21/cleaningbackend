@@ -1,6 +1,8 @@
 package com.premchemicals.cleaningbackend.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -16,6 +18,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     // =========================================================
     // 🔥 RuntimeException (Most Common in Your Service Layer)
     // =========================================================
@@ -25,8 +29,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
 
         String correlationId = java.util.UUID.randomUUID().toString();
-        System.err.println("[Correlation ID: " + correlationId + "] RuntimeException: " + ex.getMessage());
-        ex.printStackTrace();
+        log.error("[Correlation ID: {}] RuntimeException on {} {}: {}", correlationId, request.getMethod(), request.getRequestURI(), ex.getMessage(), ex);
 
         String clientMessage = ex.getMessage();
         if (clientMessage == null || 
@@ -35,8 +38,11 @@ public class GlobalExceptionHandler {
             clientMessage.toLowerCase().contains("jdbc") ||
             clientMessage.toLowerCase().contains("hibernate") ||
             clientMessage.toLowerCase().contains("database") ||
-            clientMessage.toLowerCase().contains("connection")) {
-            clientMessage = "An internal database error occurred. Reference correlation ID for details.";
+            clientMessage.toLowerCase().contains("connection") ||
+            clientMessage.toLowerCase().contains("exception") ||
+            clientMessage.toLowerCase().contains("stacktrace") ||
+            clientMessage.contains("/") || clientMessage.contains("\\")) {
+            clientMessage = "An unexpected error occurred. Reference correlation ID for details: " + correlationId;
         }
 
         ErrorResponse error = new ErrorResponse(
@@ -104,6 +110,8 @@ public class GlobalExceptionHandler {
             AccessDeniedException ex,
             HttpServletRequest request) {
 
+        log.warn("Access denied on {} {}", request.getMethod(), request.getRequestURI());
+
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.FORBIDDEN.value(),
@@ -124,8 +132,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
 
         String correlationId = java.util.UUID.randomUUID().toString();
-        System.err.println("[Correlation ID: " + correlationId + "] GlobalException: " + ex.getMessage());
-        ex.printStackTrace();
+        log.error("[Correlation ID: {}] Unhandled exception on {} {}: {}", correlationId, request.getMethod(), request.getRequestURI(), ex.getMessage(), ex);
 
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),

@@ -7,9 +7,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(2)
 @RequiredArgsConstructor
 public class AdminInitializer implements CommandLineRunner {
 
@@ -27,18 +29,6 @@ public class AdminInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        try {
-            userRepository.addDeletedByUserColumnIfNotExists();
-            userRepository.fixNullActiveUsers();
-            userRepository.fixInactiveNonDeletedUsers();
-            userRepository.ensureAdminsAreActive();
-            System.out.println("======================================");
-            System.out.println("DATABASE USER ACTIVE STATES MIGRATED & ACTIVATED");
-            System.out.println("======================================");
-        } catch (Exception e) {
-            System.err.println("Column migration note: " + e.getMessage());
-        }
-
         if (adminPhone == null || adminPhone.trim().isEmpty() || !adminPhone.trim().matches("^[6-9]\\d{9}$")) {
             System.out.println("======================================");
             System.out.println("ADMIN_PHONE NOT CONFIGURED OR INVALID - SKIPPING ADMIN ACCOUNT CREATION");
@@ -47,7 +37,6 @@ public class AdminInitializer implements CommandLineRunner {
         }
 
         String cleanPhone = adminPhone.trim();
-        String pass = (adminPassword != null && !adminPassword.isBlank()) ? adminPassword.trim() : "admin123";
         String name = (adminFullName != null && !adminFullName.isBlank()) ? adminFullName.trim() : "Admin User";
 
         try {
@@ -61,6 +50,15 @@ public class AdminInitializer implements CommandLineRunner {
                 System.out.println("======================================");
                 return;
             }
+
+            if (adminPassword == null || adminPassword.isBlank()) {
+                System.out.println("======================================");
+                System.out.println("ADMIN_PASSWORD NOT CONFIGURED OR BLANK - SKIPPING NEW ADMIN ACCOUNT CREATION");
+                System.out.println("======================================");
+                return;
+            }
+
+            String pass = adminPassword.trim();
 
             admin = User.builder()
                     .fullName(name)

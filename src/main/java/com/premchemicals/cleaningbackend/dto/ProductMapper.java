@@ -45,6 +45,8 @@ public class ProductMapper {
             );
         }
 
+        dto.setActive(product.isActive());
+
         // DEFAULT VALUES
         dto.setAverageRating(0.0);
         dto.setReviewCount(0L);

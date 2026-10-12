@@ -4,51 +4,76 @@ import com.premchemicals.cleaningbackend.dto.UserResponseDTO;
 import com.premchemicals.cleaningbackend.mapper.UserMapper;
 import com.premchemicals.cleaningbackend.model.User;
 import com.premchemicals.cleaningbackend.model.enums.Role;
+import com.premchemicals.cleaningbackend.repository.NotificationRepository;
+import com.premchemicals.cleaningbackend.repository.OrderRepository;
+import com.premchemicals.cleaningbackend.repository.ReviewHelpfulRepository;
+import com.premchemicals.cleaningbackend.repository.ReviewRepository;
 import com.premchemicals.cleaningbackend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AdminUserService {
 
     private final UserRepository userRepository;
-
+    private final OrderRepository orderRepository;
+    private final ReviewRepository reviewRepository;
+    private final ReviewHelpfulRepository reviewHelpfulRepository;
+    private final NotificationRepository notificationRepository;
     private final UserMapper userMapper;
-
     private final PasswordEncoder passwordEncoder;
 
     public List<UserResponseDTO> searchUsers(String query) {
         List<User> users = userRepository.searchUsers(query);
-
-        // Auto-migrate legacy deleted users to deletedByUser = true
-        for (User u : users) {
-            if (!u.isActive() && !u.isDeletedByUser()) {
-                if ("Deleted User".equalsIgnoreCase(u.getFullName()) ||
-                    "[DELETED]".equals(u.getPassword()) ||
-                    (u.getEmail() != null && u.getEmail().startsWith("deleted-"))) {
-                    u.setDeletedByUser(true);
-                    userRepository.save(u);
-                }
-            }
-        }
 
         return users.stream()
                 .map(userMapper::toDTO)
                 .toList();
     }
 
+    @Transactional
     public void clearBlockedUsers() {
         List<User> allUsers = userRepository.findByRole(Role.ROLE_USER);
         List<User> blockedUsers = allUsers.stream()
                 .filter(u -> !u.isActive() && !u.isDeletedByUser())
                 .toList();
 
-        if (!blockedUsers.isEmpty()) {
-            userRepository.deleteAll(blockedUsers);
+        if (blockedUsers.isEmpty()) {
+            return;
+        }
+
+        List<User> safeToDelete = new ArrayList<>();
+        int preservedCount = 0;
+
+        for (User user : blockedUsers) {
+            boolean hasOrders = orderRepository.existsByUser(user);
+            boolean hasReviews = reviewRepository.existsByUser(user);
+            boolean hasHelpfulVotes = reviewHelpfulRepository.existsByUser(user);
+
+            if (hasOrders || hasReviews || hasHelpfulVotes) {
+                preservedCount++;
+                log.info("Preserving blocked user id={} to maintain historical records and avoid foreign-key violations (orders={}, reviews={}, helpfulVotes={})",
+                        user.getId(), hasOrders, hasReviews, hasHelpfulVotes);
+            } else {
+                safeToDelete.add(user);
+            }
+        }
+
+        if (!safeToDelete.isEmpty()) {
+            for (User user : safeToDelete) {
+                notificationRepository.deleteByUser(user);
+            }
+            userRepository.deleteAll(safeToDelete);
+            log.info("Safely deleted {} blocked users without historical records; preserved {} blocked users with business records",
+                    safeToDelete.size(), preservedCount);
         }
     }
 

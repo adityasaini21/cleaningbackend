@@ -100,8 +100,22 @@ public class OrderService {
 
         for (OrderRequestDTO.OrderItemRequest item : request.getItems()) {
 
+            if (item.getQuantity() == null || item.getQuantity() < 1) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Quantity must be at least 1"
+                );
+            }
+
             Product product = productRepository.findById(item.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product not found"));
+
+            if (!product.isActive()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Product '" + product.getName() + "' is currently unavailable"
+                );
+            }
 
             OrderItem orderItem = new OrderItem();
 
@@ -126,22 +140,28 @@ public class OrderService {
 
         // 🚗 CALCULATE DELIVERY CHARGE BY ROAD DISTANCE
         double deliveryCharge = 49.0;
-        double lat = 26.4502508; // Default store lat (Prem Chemicals, Govind Nagar, Kanpur)
-        double lng = 80.2958044; // Default store lng
+        Double customerLat = request.getLatitude();
+        Double customerLng = request.getLongitude();
 
-        double[] coords = googleMapsService.getCoordinatesFromAddress(
-                request.getShippingAddress(),
-                request.getPincode()
-        );
-        if (coords != null) {
-            lat = coords[0];
-            lng = coords[1];
+        if (customerLat == null || customerLng == null) {
+            double[] coords = googleMapsService.getCoordinatesFromAddress(
+                    request.getShippingAddress(),
+                    request.getPincode()
+            );
+            if (coords != null) {
+                customerLat = coords[0];
+                customerLng = coords[1];
+            }
         }
 
-        double distanceInMeters = googleMapsService.getRoadDistanceInMeters(lat, lng);
-        System.out.println("🚗 Calculated road distance for order: " + distanceInMeters + " meters.");
-        if (distanceInMeters > 5000.0) {
-            deliveryCharge = 79.0;
+        if (customerLat != null && customerLng != null) {
+            double distanceInMeters = googleMapsService.getRoadDistanceInMeters(customerLat, customerLng);
+            System.out.println("🚗 Calculated road distance for order: " + distanceInMeters + " meters.");
+            if (distanceInMeters > 5000.0) {
+                deliveryCharge = 79.0;
+            }
+        } else {
+            System.out.println("ℹ️ Customer coordinates not resolvable. Applying default base delivery charge: ₹" + deliveryCharge);
         }
 
         order.setDeliveryCharge(deliveryCharge);
@@ -191,20 +211,34 @@ public class OrderService {
     }
 
     public Map<String, Object> getDeliveryChargeAndDistance(String address, String pincode) {
-        double lat = 26.4502508; // Default store coordinates as fallback origin (Prem Chemicals, Govind Nagar, Kanpur)
-        double lng = 80.2958044;
+        return getDeliveryChargeAndDistance(address, pincode, null, null);
+    }
 
-        double[] coords = googleMapsService.getCoordinatesFromAddress(address, pincode);
-        if (coords != null) {
-            lat = coords[0];
-            lng = coords[1];
+    public Map<String, Object> getDeliveryChargeAndDistance(String address, String pincode, Double latitude, Double longitude) {
+        Double customerLat = latitude;
+        Double customerLng = longitude;
+
+        if (customerLat == null || customerLng == null) {
+            double[] coords = googleMapsService.getCoordinatesFromAddress(address, pincode);
+            if (coords != null) {
+                customerLat = coords[0];
+                customerLng = coords[1];
+            }
         }
 
-        double distanceInMeters = googleMapsService.getRoadDistanceInMeters(lat, lng);
         double deliveryCharge = 49.0;
-        if (distanceInMeters > 5000.0) {
-            deliveryCharge = 79.0;
+        double distanceInMeters = 0.0;
+
+        if (customerLat != null && customerLng != null) {
+            distanceInMeters = googleMapsService.getRoadDistanceInMeters(customerLat, customerLng);
+            System.out.println("🚗 Calculated road distance for delivery check: " + distanceInMeters + " meters.");
+            if (distanceInMeters > 5000.0) {
+                deliveryCharge = 79.0;
+            }
+        } else {
+            System.out.println("ℹ️ Customer coordinates not resolvable. Applying default base delivery charge: ₹" + deliveryCharge);
         }
+
         Map<String, Object> result = new HashMap<>();
         result.put("distanceMeters", distanceInMeters);
         result.put("deliveryCharge", deliveryCharge);
@@ -363,7 +397,8 @@ public class OrderService {
     @Transactional
     public OrderResponseDTO cancelOrder(Long orderId) {
 
-        Order order = getOrderOrThrow(orderId);
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseGet(() -> getOrderOrThrow(orderId));
 
         String phoneNumber = getLoggedInPhoneNumber();
         User loggedInUser = userRepository.findByPhoneNumber(phoneNumber)
@@ -373,7 +408,7 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You do not own this order");
         }
 
-        // 🔥 Already cancelled check
+        // 🔥 Status eligibility checks
         if (order.getOrderStatus() == OrderStatus.CANCELLED) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -381,7 +416,6 @@ public class OrderService {
             );
         }
 
-        // 🔥 Delivered check
         if (order.getOrderStatus() == OrderStatus.DELIVERED) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -389,7 +423,21 @@ public class OrderService {
             );
         }
 
-        // 🔥 1-MINUTE RULE (CRITICAL FIX)
+        if (order.getOrderStatus() == OrderStatus.OUT_FOR_DELIVERY) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Orders out for delivery cannot be cancelled"
+            );
+        }
+
+        if (order.getOrderStatus() != OrderStatus.CREATED && order.getOrderStatus() != OrderStatus.CONFIRMED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Order cannot be cancelled in status: " + order.getOrderStatus()
+            );
+        }
+
+        // 🔥 1-MINUTE RULE: Enforced using persisted server timestamp
         LocalDateTime createdAt = order.getCreatedAt() != null
                 ? order.getCreatedAt()
                 : order.getOrderDate(); // fallback safety
@@ -401,17 +449,18 @@ public class OrderService {
             );
         }
 
-        Duration diff = Duration.between(createdAt, LocalDateTime.now());
+        long secondsElapsed = Duration.between(createdAt, LocalDateTime.now()).getSeconds();
 
-        if (diff.getSeconds() >= 60) {
+        if (secondsElapsed > 60 || secondsElapsed < 0) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Cancel time expired (only allowed within 1 minute)"
+                    "Cancellation window expired. Orders can only be cancelled within 60 seconds of placement."
             );
         }
 
         // 🔥 CANCEL ORDER
         order.setOrderStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
 
         return mapToResponse(order);
     }
@@ -581,37 +630,41 @@ public class OrderService {
         dto.setPincode(order.getPincode());
 
         dto.setItems(
+                order.getOrderItems() != null
+                        ? order.getOrderItems()
+                                .stream()
+                                .map(item -> {
 
-                order.getOrderItems()
+                                    OrderResponseDTO.OrderItemResponse r =
+                                            new OrderResponseDTO.OrderItemResponse();
 
-                        .stream()
+                                    if (item.getProduct() != null) {
+                                        r.setProductId(
+                                                item.getProduct().getId()
+                                        );
 
-                        .map(item -> {
+                                        r.setProductName(
+                                                item.getProduct().getName()
+                                        );
 
-                            OrderResponseDTO.OrderItemResponse r =
-                                    new OrderResponseDTO.OrderItemResponse();
+                                        r.setImageUrl(
+                                                item.getProduct().getImageUrl()
+                                        );
+                                    }
 
-                            r.setProductId(
-                                    item.getProduct().getId()
-                            );
+                                    r.setQuantity(
+                                            item.getQuantity()
+                                    );
 
-                            r.setProductName(
-                                    item.getProduct().getName()
-                            );
+                                    r.setPrice(
+                                            item.getPrice()
+                                    );
 
-                            r.setQuantity(
-                                    item.getQuantity()
-                            );
+                                    return r;
 
-                            r.setPrice(
-                                    item.getPrice()
-                            );
-
-                            return r;
-
-                        })
-
-                        .toList()
+                                })
+                                .toList()
+                        : Collections.emptyList()
         );
 
         return dto;

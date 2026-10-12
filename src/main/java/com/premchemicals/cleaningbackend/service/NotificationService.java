@@ -128,13 +128,12 @@ public User getTestUser() {
     // =========================================
 
     public void markAsRead(Long notificationId) {
+        User user = userRepository.findByPhoneNumber(getLoggedInPhoneNumber())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        com.premchemicals.cleaningbackend.model.Notification
-                notification =
-                notificationRepository
-                        .findById(notificationId)
-                        .orElseThrow(() ->
-                                new RuntimeException("Notification not found"));
+        com.premchemicals.cleaningbackend.model.Notification notification =
+                notificationRepository.findByIdAndUser(notificationId, user)
+                        .orElseThrow(() -> new RuntimeException("Notification not found or unauthorized"));
 
         notification.setRead(true);
 

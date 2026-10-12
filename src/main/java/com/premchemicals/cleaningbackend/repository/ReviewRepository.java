@@ -31,6 +31,8 @@ public interface ReviewRepository
             Product product
     );
 
+    boolean existsByUser(User user);
+
     // =========================================
     // RATING AGGREGATION
     // =========================================
@@ -48,4 +50,12 @@ public interface ReviewRepository
             WHERE r.product.id = :productId
             """)
     Long getReviewCount(Long productId);
+
+    @Query("""
+            SELECT r.product.id, AVG(r.rating), COUNT(r)
+            FROM Review r
+            WHERE r.product.id IN :productIds
+            GROUP BY r.product.id
+            """)
+    List<Object[]> getRatingStatsForProductIds(@org.springframework.data.repository.query.Param("productIds") List<Long> productIds);
 }

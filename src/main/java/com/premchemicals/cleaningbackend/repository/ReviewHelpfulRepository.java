@@ -18,6 +18,8 @@ public interface ReviewHelpfulRepository
             User user
     );
 
+    boolean existsByUser(User user);
+
     // =========================================
     // COUNT HELPFUL VOTES
     // =========================================
