@@ -4,7 +4,7 @@ import com.premchemicals.cleaningbackend.model.User;
 import com.premchemicals.cleaningbackend.model.enums.Role;
 import com.premchemicals.cleaningbackend.repository.OrderRepository;
 import com.premchemicals.cleaningbackend.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -16,11 +16,20 @@ import java.util.Map;
 
 @Component
 @Order(1)
-@RequiredArgsConstructor
 public class DatabaseMigrationInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+
+    @Autowired
+    public DatabaseMigrationInitializer(UserRepository userRepository, @Autowired(required = false) OrderRepository orderRepository) {
+        this.userRepository = userRepository;
+        this.orderRepository = orderRepository;
+    }
+
+    public DatabaseMigrationInitializer(UserRepository userRepository) {
+        this(userRepository, null);
+    }
 
     @Override
     public void run(String... args) {
@@ -94,7 +103,7 @@ public class DatabaseMigrationInitializer implements CommandLineRunner {
 
                 if (primary == null) {
                     primary = list.stream()
-                            .filter(u -> orderRepository.existsByUser(u))
+                            .filter(u -> orderRepository != null && orderRepository.existsByUser(u))
                             .findFirst()
                             .orElse(list.get(0));
                 }
