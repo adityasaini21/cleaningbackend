@@ -78,4 +78,13 @@ public class AdminOrderController {
     ) {
         return orderService.updateOrderStatus(orderId, status);
     }
+
+    // =========================================
+    // 🗑️ DELETE ALL ORDERS (ADMIN PURGE)
+    // =========================================
+    @DeleteMapping("/all")
+    public java.util.Map<String, String> deleteAllOrders() {
+        orderService.deleteAllOrders();
+        return java.util.Map.of("message", "All orders have been successfully deleted.");
+    }
 }

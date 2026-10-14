@@ -36,9 +36,10 @@ public class OrderController {
             @RequestParam String address,
             @RequestParam String pincode,
             @RequestParam(required = false) Double latitude,
-            @RequestParam(required = false) Double longitude
+            @RequestParam(required = false) Double longitude,
+            @RequestParam(required = false) Double orderAmount
     ) {
-        return orderService.getDeliveryChargeAndDistance(address, pincode, latitude, longitude);
+        return orderService.getDeliveryChargeAndDistance(address, pincode, latitude, longitude, orderAmount);
     }
 
     @PostMapping
@@ -147,5 +148,16 @@ public class OrderController {
             @PathVariable Long orderId) {
 
         return orderService.cancelOrder(orderId);
+    }
+
+    // =====================================================
+    // ADMIN: PURGE ALL ORDERS
+    // =====================================================
+
+    @DeleteMapping("/all")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN') or hasAnyRole('ADMIN', 'ROLE_ADMIN')")
+    public java.util.Map<String, String> deleteAllOrders() {
+        orderService.deleteAllOrders();
+        return java.util.Map.of("message", "All orders have been successfully deleted.");
     }
 }

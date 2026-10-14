@@ -193,7 +193,19 @@ class CleaningbackendApplicationTests {
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> orderService.placeOrder(request));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-        assertTrue(ex.getReason().contains("Minimum order amount is ₹200.00"));
+        assertTrue(ex.getReason().contains("Minimum order amount is ₹199.00"));
         verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("Verify Admin Purge All Orders: deletes transactions, items, and orders in batch")
+    void testAdminPurgeAllOrders() {
+        java.util.Map<String, String> response = orderController.deleteAllOrders();
+        assertNotNull(response);
+        assertEquals("All orders have been successfully deleted.", response.get("message"));
+
+        verify(paymentTransactionRepository, times(1)).deleteAllInBatch();
+        verify(orderItemRepository, times(1)).deleteAllInBatch();
+        verify(orderRepository, times(1)).deleteAllInBatch();
     }
 }

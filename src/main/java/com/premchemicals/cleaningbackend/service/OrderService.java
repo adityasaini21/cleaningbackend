@@ -129,16 +129,16 @@ public class OrderService {
             orderItems.add(orderItem);
         }
 
-        if (totalAmount < 200.0) {
+        if (totalAmount < 199.0) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Minimum order amount is ₹200.00"
+                    "Minimum order amount is ₹199.00"
             );
         }
 
         order.setOrderItems(orderItems);
 
-        // 🚗 CALCULATE DELIVERY CHARGE BY ROAD DISTANCE
+        // 🚗 CALCULATE DELIVERY CHARGE BY ROAD DISTANCE & ORDER AMOUNT
         double deliveryCharge = 49.0;
         Double customerLat = request.getLatitude();
         Double customerLng = request.getLongitude();
@@ -154,14 +154,26 @@ public class OrderService {
             }
         }
 
+        boolean isBeyond5Km = false;
         if (customerLat != null && customerLng != null) {
             double distanceInMeters = googleMapsService.getRoadDistanceInMeters(customerLat, customerLng);
             System.out.println("🚗 Calculated road distance for order: " + distanceInMeters + " meters.");
             if (distanceInMeters > 5000.0) {
-                deliveryCharge = 79.0;
+                isBeyond5Km = true;
             }
         } else {
-            System.out.println("ℹ️ Customer coordinates not resolvable. Applying default base delivery charge: ₹" + deliveryCharge);
+            System.out.println("ℹ️ Customer coordinates not resolvable. Defaulting to within 5km zone.");
+        }
+
+        if (isBeyond5Km) {
+            deliveryCharge = 79.0;
+        } else {
+            // Within 5km radius: Free delivery on orders > ₹499 (₹500+), otherwise ₹49
+            if (totalAmount > 499.0) {
+                deliveryCharge = 0.0;
+            } else {
+                deliveryCharge = 49.0;
+            }
         }
 
         order.setDeliveryCharge(deliveryCharge);
@@ -211,10 +223,14 @@ public class OrderService {
     }
 
     public Map<String, Object> getDeliveryChargeAndDistance(String address, String pincode) {
-        return getDeliveryChargeAndDistance(address, pincode, null, null);
+        return getDeliveryChargeAndDistance(address, pincode, null, null, null);
     }
 
     public Map<String, Object> getDeliveryChargeAndDistance(String address, String pincode, Double latitude, Double longitude) {
+        return getDeliveryChargeAndDistance(address, pincode, latitude, longitude, null);
+    }
+
+    public Map<String, Object> getDeliveryChargeAndDistance(String address, String pincode, Double latitude, Double longitude, Double orderAmount) {
         Double customerLat = latitude;
         Double customerLng = longitude;
 
@@ -228,20 +244,34 @@ public class OrderService {
 
         double deliveryCharge = 49.0;
         double distanceInMeters = 0.0;
+        boolean isBeyond5Km = false;
 
         if (customerLat != null && customerLng != null) {
             distanceInMeters = googleMapsService.getRoadDistanceInMeters(customerLat, customerLng);
             System.out.println("🚗 Calculated road distance for delivery check: " + distanceInMeters + " meters.");
             if (distanceInMeters > 5000.0) {
-                deliveryCharge = 79.0;
+                isBeyond5Km = true;
             }
         } else {
-            System.out.println("ℹ️ Customer coordinates not resolvable. Applying default base delivery charge: ₹" + deliveryCharge);
+            System.out.println("ℹ️ Customer coordinates not resolvable. Defaulting to within 5km zone.");
+        }
+
+        if (isBeyond5Km) {
+            deliveryCharge = 79.0;
+        } else {
+            // Within 5km radius: Free delivery on orders > ₹499 (₹500+), otherwise ₹49
+            double amount = orderAmount != null ? orderAmount : 0.0;
+            if (amount > 499.0) {
+                deliveryCharge = 0.0;
+            } else {
+                deliveryCharge = 49.0;
+            }
         }
 
         Map<String, Object> result = new HashMap<>();
         result.put("distanceMeters", distanceInMeters);
         result.put("deliveryCharge", deliveryCharge);
+        result.put("isFreeDelivery", deliveryCharge == 0.0);
         return result;
     }
 
@@ -991,9 +1021,9 @@ public class OrderService {
     // =========================================================
     @Transactional
     public void deleteAllOrders() {
-        paymentTransactionRepository.deleteAll();
-        orderItemRepository.deleteAll();
-        orderRepository.deleteAll();
+        paymentTransactionRepository.deleteAllInBatch();
+        orderItemRepository.deleteAllInBatch();
+        orderRepository.deleteAllInBatch();
     }
 
 }
