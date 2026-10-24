@@ -208,4 +208,27 @@ class CleaningbackendApplicationTests {
         verify(orderItemRepository, times(1)).deleteAllInBatch();
         verify(orderRepository, times(1)).deleteAllInBatch();
     }
+
+    @Test
+    @DisplayName("Verify GeocodingController reverseGeocode returns 200 with address")
+    void testReverseGeocodeController() {
+        com.premchemicals.cleaningbackend.controller.GeocodingController geocodingController =
+                new com.premchemicals.cleaningbackend.controller.GeocodingController(googleMapsService);
+
+        Map<String, Object> mockResult = Map.of(
+                "address", "123 Govind Nagar",
+                "pincode", "208006",
+                "city", "Kanpur",
+                "state", "Uttar Pradesh"
+        );
+        when(googleMapsService.reverseGeocode(26.45, 80.30)).thenReturn(mockResult);
+
+        org.springframework.http.ResponseEntity<?> response = geocodingController.reverseGeocode(26.45, 80.30);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody() instanceof Map);
+        Map<?, ?> body = (Map<?, ?>) response.getBody();
+        assertEquals("123 Govind Nagar", body.get("address"));
+        assertEquals("208006", body.get("pincode"));
+    }
 }

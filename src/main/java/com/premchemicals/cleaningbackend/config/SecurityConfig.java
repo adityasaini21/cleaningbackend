@@ -92,7 +92,9 @@ public class SecurityConfig {
 
                                 "/api/service-status",
 
-                                "/api/logs/**"
+                                "/api/logs/**",
+
+                                "/api/geocoding/**"
 
                         ).permitAll()
 
