@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Entity
@@ -89,10 +90,10 @@ public class Order {
     )
     private List<PaymentTransaction> paymentTransactions;
 
-    // 🔥 AUTO SET TIMESTAMP
+    // 🔥 AUTO SET TIMESTAMP (IST - Asia/Kolkata)
     @PrePersist
     public void prePersist() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
         this.createdAt = now;
         this.orderDate = now;
     }

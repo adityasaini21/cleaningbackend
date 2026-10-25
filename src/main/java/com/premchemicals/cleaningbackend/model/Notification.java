@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "notifications")
@@ -55,11 +56,11 @@ public class Notification {
     private LocalDateTime createdAt;
 
     // =========================================
-    // AUTO TIMESTAMP
+    // AUTO TIMESTAMP (IST - Asia/Kolkata)
     // =========================================
 
     @PrePersist
     public void prePersist() {
-        createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     }
 }
