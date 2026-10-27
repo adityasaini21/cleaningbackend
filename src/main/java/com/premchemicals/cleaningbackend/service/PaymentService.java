@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -167,7 +168,7 @@ public class PaymentService {
 
         transaction.setRazorpayPaymentId(razorpayPaymentId);
         transaction.setPaymentStatus(PaymentStatus.COMPLETED);
-        transaction.setTransactionTime(LocalDateTime.now());
+        transaction.setTransactionTime(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
 
         // Send notifications upon successful online payment confirmation
         User user = order.getUser();
@@ -220,7 +221,7 @@ public class PaymentService {
                     .findByRazorpayOrderId(order.getRazorpayOrderId())
                     .ifPresent(transaction -> {
                         transaction.setPaymentStatus(PaymentStatus.FAILED);
-                        transaction.setTransactionTime(LocalDateTime.now());
+                        transaction.setTransactionTime(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
                     });
         }
     }

@@ -23,6 +23,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class OrderService {
 
+    private static final ZoneId IST_ZONE = ZoneId.of("Asia/Kolkata");
+
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
@@ -53,9 +55,9 @@ public class OrderService {
 
         order.setUser(user);
 
-        order.setOrderDate(LocalDateTime.now());
+        order.setOrderDate(LocalDateTime.now(IST_ZONE));
 
-        order.setCreatedAt(LocalDateTime.now());
+        order.setCreatedAt(LocalDateTime.now(IST_ZONE));
 
         order.setShippingAddress(
                 request.getShippingAddress()
@@ -343,7 +345,7 @@ public class OrderService {
 
             if (newStatus == OrderStatus.DELIVERED) {
 
-                order.setDeliveredAt(LocalDateTime.now());
+                order.setDeliveredAt(LocalDateTime.now(IST_ZONE));
 
                 order.setPaymentStatus(
                         PaymentStatus.COMPLETED
@@ -479,9 +481,10 @@ public class OrderService {
             );
         }
 
-        long secondsElapsed = Duration.between(createdAt, LocalDateTime.now()).getSeconds();
+        LocalDateTime now = LocalDateTime.now(IST_ZONE);
+        long secondsElapsed = Duration.between(createdAt, now).getSeconds();
 
-        if (secondsElapsed > 60 || secondsElapsed < 0) {
+        if (secondsElapsed > 60 || secondsElapsed < -5) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Cancellation window expired. Orders can only be cancelled within 60 seconds of placement."
@@ -536,7 +539,7 @@ public class OrderService {
 
     public List<DeadStockDTO> getDeadStockProducts() {
 
-        LocalDateTime date = LocalDateTime.now().minusDays(30);
+        LocalDateTime date = LocalDateTime.now(IST_ZONE).minusDays(30);
 
         return orderRepository.findDeadStockProducts(date)
                 .stream()
@@ -548,7 +551,7 @@ public class OrderService {
 
     public List<ProductionForecastDTO> getProductionForecast() {
 
-        LocalDateTime date = LocalDateTime.now().minusDays(30);
+        LocalDateTime date = LocalDateTime.now(IST_ZONE).minusDays(30);
 
         return orderRepository.getLast30DaysSales(date)
                 .stream()
@@ -704,7 +707,7 @@ public class OrderService {
 // =========================================================
     public List<RestockRecommendationDTO> getRestockRecommendation() {
 
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now(IST_ZONE).minusDays(30);
 
         List<Object[]> salesData =
                 orderRepository.getLast30DaysSales(thirtyDaysAgo);

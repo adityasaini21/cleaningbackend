@@ -40,6 +40,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -368,7 +369,7 @@ public class AppBugFixesTest {
         order.setOrderStatus(OrderStatus.CREATED);
         order.setPaymentMethod(PaymentMethod.COD);
         // Created 20 seconds ago
-        order.setCreatedAt(LocalDateTime.now().minusSeconds(20));
+        order.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).minusSeconds(20));
         order.setOrderDate(order.getCreatedAt());
 
         when(orderRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(order));
@@ -394,7 +395,7 @@ public class AppBugFixesTest {
         order.setOrderStatus(OrderStatus.CONFIRMED);
         order.setPaymentMethod(PaymentMethod.COD);
         // Created 65 seconds ago
-        order.setCreatedAt(LocalDateTime.now().minusSeconds(65));
+        order.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).minusSeconds(65));
         order.setOrderDate(order.getCreatedAt());
 
         when(orderRepository.findByIdForUpdate(11L)).thenReturn(Optional.of(order));
@@ -422,7 +423,7 @@ public class AppBugFixesTest {
         orderOut.setId(12L);
         orderOut.setUser(user);
         orderOut.setOrderStatus(OrderStatus.OUT_FOR_DELIVERY);
-        orderOut.setCreatedAt(LocalDateTime.now().minusSeconds(10));
+        orderOut.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).minusSeconds(10));
         when(orderRepository.findByIdForUpdate(12L)).thenReturn(Optional.of(orderOut));
 
         ResponseStatusException exOut = assertThrows(ResponseStatusException.class, () ->
@@ -436,7 +437,7 @@ public class AppBugFixesTest {
         orderDelivered.setId(13L);
         orderDelivered.setUser(user);
         orderDelivered.setOrderStatus(OrderStatus.DELIVERED);
-        orderDelivered.setCreatedAt(LocalDateTime.now().minusSeconds(10));
+        orderDelivered.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).minusSeconds(10));
         when(orderRepository.findByIdForUpdate(13L)).thenReturn(Optional.of(orderDelivered));
 
         ResponseStatusException exDelivered = assertThrows(ResponseStatusException.class, () ->
@@ -450,7 +451,7 @@ public class AppBugFixesTest {
         orderCancelled.setId(14L);
         orderCancelled.setUser(user);
         orderCancelled.setOrderStatus(OrderStatus.CANCELLED);
-        orderCancelled.setCreatedAt(LocalDateTime.now().minusSeconds(10));
+        orderCancelled.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).minusSeconds(10));
         when(orderRepository.findByIdForUpdate(14L)).thenReturn(Optional.of(orderCancelled));
 
         ResponseStatusException exCancelled = assertThrows(ResponseStatusException.class, () ->
@@ -476,7 +477,7 @@ public class AppBugFixesTest {
         victimOrder.setId(15L);
         victimOrder.setUser(victim);
         victimOrder.setOrderStatus(OrderStatus.CREATED);
-        victimOrder.setCreatedAt(LocalDateTime.now().minusSeconds(10));
+        victimOrder.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).minusSeconds(10));
         when(orderRepository.findByIdForUpdate(15L)).thenReturn(Optional.of(victimOrder));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->

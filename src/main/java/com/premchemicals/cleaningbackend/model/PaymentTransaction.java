@@ -50,6 +50,6 @@ public class PaymentTransaction {
     // 🔁 Auto-set time before persist
     @PrePersist
     public void prePersist() {
-        this.transactionTime = LocalDateTime.now();
+        this.transactionTime = LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"));
     }
 }
