@@ -436,7 +436,15 @@ public class AuthController {
         user.setFcmToken(null);
         user.setEmail(null);
         user.setPassword("[DELETED]");
-        user.setPhoneNumber("DELETED_" + user.getId() + "_" + System.currentTimeMillis());
+        String rawPhone = user.getPhoneNumber();
+        String phoneInfix = "";
+        if (rawPhone != null) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("([6-9]\\d{9})").matcher(rawPhone);
+            if (m.find()) {
+                phoneInfix = "_" + m.group(1);
+            }
+        }
+        user.setPhoneNumber("DELETED_" + user.getId() + phoneInfix + "_" + System.currentTimeMillis());
 
         userRepository.save(user);
         return "Account deactivated and user data cleared successfully";

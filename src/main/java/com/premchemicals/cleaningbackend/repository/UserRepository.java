@@ -61,7 +61,7 @@ LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))
 OR
 u.phoneNumber LIKE CONCAT('%', :query, '%')
 )
-ORDER BY u.fullName
+ORDER BY u.id DESC
 """)
     List<User> searchUsers(
             @Param("query") String query

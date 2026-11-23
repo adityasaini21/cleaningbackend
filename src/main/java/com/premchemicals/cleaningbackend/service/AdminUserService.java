@@ -2,6 +2,7 @@ package com.premchemicals.cleaningbackend.service;
 
 import com.premchemicals.cleaningbackend.dto.UserResponseDTO;
 import com.premchemicals.cleaningbackend.mapper.UserMapper;
+import com.premchemicals.cleaningbackend.model.Order;
 import com.premchemicals.cleaningbackend.model.User;
 import com.premchemicals.cleaningbackend.model.enums.Role;
 import com.premchemicals.cleaningbackend.repository.NotificationRepository;
@@ -17,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -31,12 +34,54 @@ public class AdminUserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
+    private static final Pattern INDIAN_PHONE_PATTERN = Pattern.compile("([6-9]\\d{9})");
+
     public List<UserResponseDTO> searchUsers(String query) {
         List<User> users = userRepository.searchUsers(query);
 
         return users.stream()
-                .map(userMapper::toDTO)
+                .map(this::mapUserToAdminDTO)
                 .toList();
+    }
+
+    private UserResponseDTO mapUserToAdminDTO(User user) {
+        UserResponseDTO dto = userMapper.toDTO(user);
+
+        if (user.isDeletedByUser() || (user.getPhoneNumber() != null && user.getPhoneNumber().startsWith("DELETED_"))) {
+            dto.setDeletedByUser(true);
+            String rawPhone = user.getPhoneNumber();
+            String extractedPhone = null;
+
+            if (rawPhone != null) {
+                Matcher m = INDIAN_PHONE_PATTERN.matcher(rawPhone);
+                if (m.find()) {
+                    extractedPhone = m.group(1);
+                }
+            }
+
+            // Fallback: check historical orders for user's phone number
+            if (extractedPhone == null) {
+                try {
+                    List<Order> orders = orderRepository.findByUser(user);
+                    if (orders != null && !orders.isEmpty()) {
+                        for (int i = orders.size() - 1; i >= 0; i--) {
+                            Order o = orders.get(i);
+                            if (o.getPhoneNumber() != null && o.getPhoneNumber().matches("^[6-9]\\d{9}$")) {
+                                extractedPhone = o.getPhoneNumber();
+                                break;
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.debug("Could not resolve historical phone for deleted user {}: {}", user.getId(), e.getMessage());
+                }
+            }
+
+            if (extractedPhone != null) {
+                dto.setPhoneNumber(extractedPhone);
+            }
+        }
+        return dto;
     }
 
     @Transactional
